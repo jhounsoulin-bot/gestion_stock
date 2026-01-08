@@ -1,3 +1,4 @@
+# main.py
 from fastapi import FastAPI, Request, Form
 from fastapi.responses import HTMLResponse, RedirectResponse, StreamingResponse
 from fastapi.templating import Jinja2Templates
@@ -5,13 +6,12 @@ from starlette.middleware.sessions import SessionMiddleware
 from typing import List
 import sqlite3, io
 from datetime import datetime, timedelta
+from auth import verify_user
 from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph
 from reportlab.lib.styles import getSampleStyleSheet
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.units import cm
-
-from auth import verify_user  # Assurez-vous que votre fichier auth.py contient verify_user
 
 app = FastAPI()
 app.add_middleware(SessionMiddleware, secret_key="super-secret-key")
@@ -93,12 +93,11 @@ def dashboard(request: Request):
         return RedirectResponse("/login", status_code=303)
     username = request.session["user"]
     role = request.session.get("role")
-
     conn = get_db()
     cursor = conn.cursor()
 
     if role == "admin":
-        # ---------------- STATISTIQUES ADMIN ----------------
+        # Statistiques admin
         today = datetime.now().strftime("%Y-%m-%d")
         week_start = (datetime.now() - timedelta(days=datetime.now().weekday())).strftime("%Y-%m-%d")
         month_start = datetime.now().strftime("%Y-%m-01")
@@ -132,12 +131,11 @@ def dashboard(request: Request):
             LIMIT 3
         """)
         least_sold = cursor.fetchall()
-
         conn.close()
         return templates.TemplateResponse("dashboard.html", {
             "request": request,
-            "username": username,
             "role": role,
+            "username": username,
             "total_today": total_today,
             "total_week": total_week,
             "total_month": total_month,
@@ -145,54 +143,40 @@ def dashboard(request: Request):
             "top_sold": top_sold,
             "least_sold": least_sold
         })
-
     else:
-        # ---------------- PRODUITS USER ----------------
-        cursor.execute("SELECT id, name, quantity, price FROM products WHERE username=?", (username,))
+        # Dashboard utilisateur
+        cursor.execute("SELECT id, name, quantity, total_quantity, price FROM products WHERE username=?", (username,))
         rows = cursor.fetchall()
         conn.close()
-        products = [{"id": r[0], "name": r[1], "quantity": r[2], "price": r[3]} for r in rows]
+        products = [{"id": r[0], "name": r[1], "quantity": r[2], "total_quantity": r[3], "price": r[4]} for r in rows]
         return templates.TemplateResponse("dashboard.html", {
             "request": request,
-            "username": username,
             "role": role,
+            "username": username,
             "products": products
         })
 
-# ---------------- AJOUTER PRODUIT ----------------
-@app.get("/add-product-form", response_class=HTMLResponse)
-def add_product_form(request: Request):
-    if "user" not in request.session:
-        return RedirectResponse("/login", status_code=303)
-    return templates.TemplateResponse("add_product.html", {"request": request})
-
+# ---------------- ADD PRODUCT ----------------
 @app.post("/add-product")
-def add_product(request: Request, name: str = Form(...), quantity: int = Form(...), price: float = Form(...)):
+def add_product(request: Request,
+                name: str = Form(...),
+                quantity: int = Form(...),
+                price: float = Form(...)):
     if "user" not in request.session:
         return RedirectResponse("/login", status_code=303)
     username = request.session["user"]
     conn = get_db()
     cursor = conn.cursor()
-    cursor.execute("INSERT INTO products (name, quantity, total_quantity, price, username) VALUES (?, ?, ?, ?, ?)",
-                   (name, quantity, quantity, price, username))
+    cursor.execute("SELECT ville FROM user WHERE username=?", (username,))
+    ville_row = cursor.fetchone()
+    ville = ville_row[0] if ville_row else ""
+    cursor.execute("INSERT INTO products (name, quantity, total_quantity, price, username, ville) VALUES (?, ?, ?, ?, ?, ?)",
+                   (name, quantity, quantity, price, username, ville))
     conn.commit()
     conn.close()
     return RedirectResponse("/dashboard", status_code=303)
 
-# ---------------- ENREGISTRER UNE VENTE ----------------
-@app.get("/sale", response_class=HTMLResponse)
-def sale_form(request: Request):
-    if "user" not in request.session:
-        return RedirectResponse("/login", status_code=303)
-    username = request.session["user"]
-    conn = get_db()
-    cursor = conn.cursor()
-    cursor.execute("SELECT id, name, quantity, price FROM products WHERE username=?", (username,))
-    rows = cursor.fetchall()
-    conn.close()
-    products = [{"id": r[0], "name": r[1], "quantity": r[2], "price": r[3]} for r in rows]
-    return templates.TemplateResponse("sale.html", {"request": request, "products": products})
-
+# ---------------- SALE ----------------
 @app.post("/sale")
 def sale_submit(request: Request,
                 client_name: str = Form(...),
@@ -204,7 +188,6 @@ def sale_submit(request: Request,
     conn = get_db()
     cursor = conn.cursor()
     items = []
-
     for pid, qty in zip(product_ids, quantities):
         if qty <= 0:
             continue
@@ -217,16 +200,19 @@ def sale_submit(request: Request,
             conn.close()
             return HTMLResponse(f"<h2>Stock insuffisant pour {name}</h2>")
         total = qty * price
-        cursor.execute("UPDATE products SET quantity=quantity-? WHERE id=?", (qty, pid))
+        cursor.execute("UPDATE products SET quantity = quantity - ? WHERE id=?", (qty, pid))
         cursor.execute("INSERT INTO sales (product_id, username, quantity_sold, total_price) VALUES (?, ?, ?, ?)",
                        (pid, username, qty, total))
         items.append({"name": name, "quantity": qty, "price": price, "total": total})
-
     conn.commit()
     conn.close()
     if not items:
         return HTMLResponse("<h2>Aucun produit sélectionné</h2>")
-
     pdf_buffer = generate_invoice_pdf(client_name, items)
     return StreamingResponse(pdf_buffer, media_type="application/pdf",
                              headers={"Content-Disposition": f"inline; filename=facture_{client_name}.pdf"})
+
+# ---------------- RUN ----------------
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=8000, reload=True)
