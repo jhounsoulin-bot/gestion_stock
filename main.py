@@ -97,7 +97,6 @@ def dashboard(request: Request):
     cursor = conn.cursor()
 
     if role == "admin":
-        # Statistiques admin
         today = datetime.now().strftime("%Y-%m-%d")
         week_start = (datetime.now() - timedelta(days=datetime.now().weekday())).strftime("%Y-%m-%d")
         month_start = datetime.now().strftime("%Y-%m-01")
@@ -144,7 +143,6 @@ def dashboard(request: Request):
             "least_sold": least_sold
         })
     else:
-        # Dashboard utilisateur
         cursor.execute("SELECT id, name, quantity, total_quantity, price FROM products WHERE username=?", (username,))
         rows = cursor.fetchall()
         conn.close()
@@ -211,6 +209,53 @@ def sale_submit(request: Request,
     pdf_buffer = generate_invoice_pdf(client_name, items)
     return StreamingResponse(pdf_buffer, media_type="application/pdf",
                              headers={"Content-Disposition": f"inline; filename=facture_{client_name}.pdf"})
+
+# ---------------- EDIT PRODUCT ----------------
+@app.get("/edit-product/{product_id}", response_class=HTMLResponse)
+def edit_product_page(request: Request, product_id: int):
+    if "user" not in request.session:
+        return RedirectResponse("/login", status_code=303)
+    username = request.session["user"]
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("SELECT id, name, quantity, price FROM products WHERE id=? AND username=?", (product_id, username))
+    product = cursor.fetchone()
+    conn.close()
+    if not product:
+        return HTMLResponse("<h2>Produit non trouvé</h2>")
+    return templates.TemplateResponse("edit_product.html", {
+        "request": request,
+        "product": {"id": product[0], "name": product[1], "quantity": product[2], "price": product[3]}
+    })
+
+@app.post("/edit-product/{product_id}")
+def edit_product_submit(request: Request, product_id: int,
+                        name: str = Form(...),
+                        quantity: int = Form(...),
+                        price: float = Form(...)):
+    if "user" not in request.session:
+        return RedirectResponse("/login", status_code=303)
+    username = request.session["user"]
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("UPDATE products SET name=?, quantity=?, price=? WHERE id=? AND username=?",
+                   (name, quantity, price, product_id, username))
+    conn.commit()
+    conn.close()
+    return RedirectResponse("/dashboard", status_code=303)
+
+# ---------------- DELETE PRODUCT ----------------
+@app.post("/delete-product/{product_id}")
+def delete_product(product_id: int, request: Request):
+    if "user" not in request.session:
+        return RedirectResponse("/login", status_code=303)
+    username = request.session["user"]
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("DELETE FROM products WHERE id=? AND username=?", (product_id, username))
+    conn.commit()
+    conn.close()
+    return RedirectResponse("/dashboard", status_code=303)
 
 # ---------------- RUN ----------------
 if __name__ == "__main__":
