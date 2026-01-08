@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Enregistrer une vente</title>
+    <style>
+        body { font-family: Arial, sans-serif; background: #f4f4f4; margin: 0; padding: 0; }
+        header { background: #4CAF50; color: white; padding: 15px; text-align: center; }
+        h1 { margin: 0; }
+        main { padding: 20px; }
+        table { border-collapse: collapse; width: 100%; background: #fff; border-radius: 8px; overflow: hidden; }
+        th, td { border: 1px solid #ddd; padding: 12px; text-align: center; }
+        th { background-color: #4CAF50; color: white; }
+        tr:hover { background-color: #f1f1f1; }
+        input[type=number] { width: 60px; }
+        button { margin-top: 15px; padding: 10px 15px; background-color: #4CAF50; color: white; border: none; border-radius: 5px; cursor: pointer; }
+        button:hover { background-color: #45a049; }
+        a.button { display: inline-block; margin-top: 10px; text-decoration: none; color: #2196F3; }
+        a.button:hover { text-decoration: underline; }
+        tfoot td { font-weight: bold; }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Enregistrer une vente</h1>
+    </header>
+    <main>
+        <form action="/sale" method="post" id="saleForm">
+            <label for="client_name">Nom du client :</label>
+            <input type="text" name="client_name" id="client_name" required>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>Produit</th>
+                        <th>Prix unitaire</th>
+                        <th>Stock disponible</th>
+                        <th>Quantité vendue</th>
+                        <th>Total</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for product in products %}
+                    <tr>
+                        <td>{{ product.name }}</td>
+                        <td>{{ product.price }} FCFA</td>
+                        <td>{{ product.quantity }}</td>
+                        <td>
+                            <input type="hidden" name="product_ids[]" value="{{ product.id }}">
+                            <input type="number" name="quantities[]" value="0" min="0" max="{{ product.quantity }}" class="qty">
+                        </td>
+                        <td class="line-total">0 FCFA</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+                <tfoot>
+                    <tr>
+                        <td colspan="4">TOTAL GÉNÉRAL</td>
+                        <td id="grand-total">0 FCFA</td>
+                    </tr>
+                </tfoot>
+            </table>
+
+            <button type="submit">Valider la vente</button>
+        </form>
+
+        <a href="/dashboard" class="button">Retour au dashboard</a>
+
+        <script>
+            const form = document.getElementById('saleForm');
+            const rows = document.querySelectorAll('tbody tr');
+
+            function updateTotals() {
+                let grandTotal = 0;
+                rows.forEach(row => {
+                    const price = parseFloat(row.cells[1].textContent);
+                    const stock = parseInt(row.cells[2].textContent);
+                    const qtyInput = row.querySelector('.qty');
+                    let qty = parseInt(qtyInput.value) || 0;
+
+                    if (qty > stock) qty = stock;
+                    qtyInput.value = qty;
+
+                    const lineTotal = price * qty;
+                    row.querySelector('.line-total').textContent = lineTotal.toFixed(2) + " FCFA";
+
+                    grandTotal += lineTotal;
+                });
+                document.getElementById('grand-total').textContent = grandTotal.toFixed(2) + " FCFA";
+            }
+
+            rows.forEach(row => row.querySelector('.qty').addEventListener('input', updateTotals));
+
+            form.addEventListener('submit', function(e) {
+                let valid = false;
+                rows.forEach(row => { if (parseInt(row.querySelector('.qty').value) > 0) valid = true; });
+                if (!valid) { e.preventDefault(); alert("Veuillez entrer au moins une quantité supérieure à 0 !"); }
+            });
+
+            updateTotals();
+        </script>
+    </main>
+</body>
+</html>

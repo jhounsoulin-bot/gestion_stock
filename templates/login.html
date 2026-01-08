@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Connexion</title>
+    <style>
+        html, body {
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            font-family: Arial, sans-serif;
+            background: #f0f2f5;
+        }
+
+        /* Conteneur parent pour centrer absolument */
+        .login-wrapper {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100%;
+        }
+
+        .login-container {
+            background: #fff;
+            padding: 40px 50px;
+            border-radius: 10px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+            width: 350px;
+            text-align: center;
+        }
+
+        .login-container h1 {
+            margin-bottom: 30px;
+            color: #333;
+        }
+
+        .login-container input[type="text"],
+        .login-container input[type="password"] {
+            width: 100%;
+            padding: 12px 15px;
+            margin: 10px 0;
+            border-radius: 5px;
+            border: 1px solid #ccc;
+            font-size: 16px;
+        }
+
+        .login-container button {
+            width: 100%;
+            padding: 12px;
+            background-color: #4CAF50;
+            border: none;
+            border-radius: 5px;
+            color: white;
+            font-size: 16px;
+            cursor: pointer;
+            margin-top: 15px;
+        }
+
+        .login-container button:hover {
+            background-color: #45a049;
+        }
+
+        .error-message {
+            color: red;
+            margin-bottom: 15px;
+        }
+    </style>
+</head>
+<body>
+    <div class="login-wrapper">
+        <div class="login-container">
+            <h1>Connexion</h1>
+
+            {% if error %}
+                <div class="error-message">{{ error }}</div>
+            {% endif %}
+
+            <form method="post" action="/login">
+                <input type="text" name="username" placeholder="Nom d'utilisateur" required>
+                <input type="password" name="password" placeholder="Mot de passe" required>
+                <button type="submit">Se connecter</button>
+            </form>
+        </div>
+    </div>
+</body>
+</html>

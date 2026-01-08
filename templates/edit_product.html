@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Modifier le produit</title>
+    <style>
+        body { font-family: Arial; margin: 30px; background-color: #f9f9f9; }
+        form { background-color: #fff; padding: 15px; border: 1px solid #ddd; border-radius: 5px; width: 300px; }
+        input[type="text"], input[type="number"] { width: 100%; padding: 5px; margin-bottom: 10px; }
+        input[type="submit"] { padding: 7px 20px; background-color: #007bff; color: white; border: none; border-radius: 3px; cursor: pointer; }
+    </style>
+</head>
+<body>
+    <h2>Modifier le produit</h2>
+    <form method="post">
+        <input type="hidden" name="username" value="{{ username }}">
+        <label>Nom :</label><br>
+        <input type="text" name="name" value="{{ product.name }}" required><br>
+        <label>Quantité :</label><br>
+        <input type="number" name="quantity" value="{{ product.quantity }}" required><br>
+        <label>Prix :</label><br>
+        <input type="number" step="0.01" name="price" value="{{ product.price }}" required><br><br>
+        <input type="submit" value="Enregistrer">
+    </form>
+</body>
+</html>

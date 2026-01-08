@@ -1,0 +1,210 @@
+<!-- templates/dashboard.html -->
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Dashboard</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f0f4f8;
+            margin: 0;
+            padding: 0;
+        }
+
+        header {
+            background-color: #87CEEB;
+            color: white;
+            padding: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        header h1 {
+            margin: 0;
+            font-size: 24px;
+        }
+
+        header .actions a {
+            background-color: white;
+            color: #87CEEB;
+            padding: 8px 16px;
+            text-decoration: none;
+            border-radius: 5px;
+            font-weight: bold;
+            margin-left: 10px;
+        }
+
+        header .actions a:hover {
+            background-color: #b0e0e6;
+        }
+
+        .container {
+            padding: 20px;
+        }
+
+        h2 {
+            color: #333;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: center;
+        }
+
+        th {
+            background-color: #87CEEB;
+            color: white;
+        }
+
+        td {
+            background-color: #fff;
+        }
+
+        input[type="text"] {
+            padding: 6px;
+            width: 300px;
+            margin-bottom: 10px;
+            border-radius: 4px;
+            border: 1px solid #ccc;
+        }
+
+        .card {
+            background-color: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+
+        ul {
+            padding-left: 20px;
+        }
+
+        @media (max-width: 600px) {
+            header {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+            header .actions {
+                margin-top: 10px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+<header>
+    <h1>Bonjour, {{ username }}{% if role == 'admin' %} (Admin){% endif %}</h1>
+    <div class="actions">
+        {% if role != "admin" %}
+            <a href="/add-product-form">Ajouter un produit</a>
+            <a href="/sale">Enregistrer une vente</a>
+        {% endif %}
+        <a href="/logout">Déconnexion</a>
+    </div>
+</header>
+
+<div class="container">
+
+    {% if role == "admin" %}
+        <!-- ADMIN STATISTIQUES -->
+        <div class="card">
+            <h2>📊 Ventes</h2>
+            <p><strong>Aujourd'hui :</strong> {{ total_today }} FCFA</p>
+            <p><strong>Cette semaine :</strong> {{ total_week }} FCFA</p>
+            <p><strong>Ce mois :</strong> {{ total_month }} FCFA</p>
+        </div>
+
+        <div class="card">
+            <h2>⚠ Produits en alerte (stock < 5)</h2>
+            {% if low_stock %}
+                <ul>
+                {% for p in low_stock %}
+                    <li>{{ p[0] }} — {{ p[1] }}</li>
+                {% endfor %}
+                </ul>
+            {% else %}
+                <p>Tous les produits sont bien en stock.</p>
+            {% endif %}
+        </div>
+
+        <div class="card">
+            <h2>🔝 Top 3 produits les plus vendus</h2>
+            {% if top_sold %}
+                <ul>
+                {% for p in top_sold %}
+                    <li>{{ p[0] }} — {{ p[1] }}</li>
+                {% endfor %}
+                </ul>
+            {% else %}
+                <p>Aucune vente enregistrée.</p>
+            {% endif %}
+        </div>
+
+        <div class="card">
+            <h2>🔻 Top 3 produits les moins vendus</h2>
+            {% if least_sold %}
+                <ul>
+                {% for p in least_sold %}
+                    <li>{{ p[0] }} — {{ p[1] }}</li>
+                {% endfor %}
+                </ul>
+            {% else %}
+                <p>Aucune vente enregistrée.</p>
+            {% endif %}
+        </div>
+
+    {% else %}
+        <!-- USER PRODUITS -->
+        <h2>🛒 Produits disponibles</h2>
+
+        <input type="text" id="searchInput" placeholder="Rechercher un produit...">
+
+        <table id="productsTable">
+            <thead>
+                <tr>
+                    <th>Nom</th>
+                    <th>Stock</th>
+                    <th>Vendu</th>
+                    <th>Prix</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for p in products %}
+                <tr>
+                    <td>{{ p.name }}</td>
+                    <td>{{ p.quantity }}</td>
+                    <td>{{ p.sold_quantity }}</td>
+                    <td>{{ p.price }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+
+        <script>
+            const searchInput = document.getElementById("searchInput");
+            searchInput.addEventListener("input", function() {
+                const filter = searchInput.value.toLowerCase();
+                const rows = document.querySelectorAll("#productsTable tbody tr");
+                rows.forEach(row => {
+                    const name = row.cells[0].textContent.toLowerCase();
+                    row.style.display = name.includes(filter) ? "" : "none";
+                });
+            });
+        </script>
+
+    {% endif %}
+
+</div>
+
+</body>
+</html>
