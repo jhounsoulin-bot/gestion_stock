@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% block title %}Produits{% endblock %}
+
+{% block content %}
+<h2>Liste des produits</h2>
+
+<table class="table">
+  <thead>
+    <tr>
+      <th>Nom</th>
+      <th>Quantité disponible</th>
+      <th>Prix (FCFA)</th>
+      <th>Actions</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for product in products %}
+    <tr>
+      <td>{{ product.name }}</td>
+      <td>{{ product.quantity }}</td>
+      <td>{{ product.price }}</td>
+      <td>
+        <a href="/restock/{{ product.id }}" class="btn">Réapprovisionner</a>
+      </td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+<a href="/add-product" class="btn">➕ Ajouter un produit</a>
+{% endblock %}

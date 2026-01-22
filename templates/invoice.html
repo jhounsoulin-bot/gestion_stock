@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+{% block title %}Facture{% endblock %}
+
+{% block content %}
+<h2 style="text-align:center;">FACTURE NIVAL IMPACT</h2>
+<p><strong>Client :</strong> {{ invoice.client_name }}</p>
+<p><strong>Date :</strong> {{ invoice.date }}</p>
+
+<table class="table">
+  <thead>
+    <tr>
+      <th>Produit</th>
+      <th>Quantité</th>
+      <th>Prix unitaire</th>
+      <th>Total</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for sale in sales %}
+    <tr>
+      <td>{{ sale.product.name }}</td>
+      <td>{{ sale.quantity_sold }}</td>
+      <td>{{ sale.product.price }}</td>
+      <td>{{ sale.total_price }}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+<p style="text-align:right; font-weight:bold;">
+  Total facture : {{ sales | sum(attribute='total_price') }} FCFA
+</p>
+
+<hr>
+
+<h2>Ajouter un produit à la facture</h2>
+<form action="/add-to-invoice/{{ invoice.id }}" method="post">
+  <label>Vendeur :</label>
+  <input type="text" name="username" required><br><br>
+
+  <label>Produit :</label>
+  <select name="product_id" required onchange="updateTotal()">
+    {% for product in products %}
+    <option value="{{ product.id }}" data-price="{{ product.price }}">
+      {{ product.name }} ({{ product.price }} FCFA)
+    </option>
+    {% endfor %}
+  </select><br><br>
+
+  <label>Quantité :</label>
+  <input type="number" step="0.5" name="quantity_sold" id="quantity_sold" required oninput="updateTotal()"><br><br>
+
+  <label>Total :</label>
+  <input type="number" step="0.01" name="total_price" id="total_price" readonly><br><br>
+
+  <button type="submit">Ajouter à la facture</button>
+</form>
+
+<hr>
+
+<!-- ✅ Bouton de téléchargement PDF -->
+<hr>
+<a href="/download-invoice/{{ invoice.id }}" class="btn" target="_blank">
+  📥 Télécharger la facture en PDF
+</a>
+
+
+<script>
+function updateTotal() {
+  const select = document.querySelector("select[name='product_id']");
+  const option = select.options[select.selectedIndex];
+  const price = parseFloat(option.getAttribute("data-price")) || 0;
+  const qty = parseFloat(document.getElementById("quantity_sold").value) || 0;
+  document.getElementById("total_price").value = (price * qty).toFixed(2);
+}
+</script>
+{% endblock %}

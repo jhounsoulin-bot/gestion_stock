@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block title %}Réapprovisionnement{% endblock %}
+
+{% block content %}
+<h2>Réapprovisionner {{ product.name }}</h2>
+<form action="/restock/{{ product.id }}" method="post">
+  <label for="added_quantity">Quantité à ajouter :</label><br>
+  <input type="number" step="0.5" id="added_quantity" name="added_quantity" min="0.5" required>
+  <br><br>
+
+  <label for="new_price">Nouveau prix (FCFA) :</label><br>
+  <input type="number" step="0.01" id="new_price" name="new_price" value="{{ product.price }}" required>
+  <br><br>
+
+  <button type="submit">✅ Mettre à jour</button>
+</form>
+{% endblock %}

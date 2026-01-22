@@ -8,7 +8,7 @@
         h1 { color: #1e90ff; }
         form { background-color: white; padding: 20px; border-radius: 10px; max-width: 400px; }
         label { display: block; margin-top: 10px; font-weight: bold; }
-        input[type=text], input[type=number], input[type=float] { width: 100%; padding: 8px; margin-top: 5px; border-radius: 5px; border: 1px solid #ccc; }
+        input[type=text], input[type=number] { width: 100%; padding: 8px; margin-top: 5px; border-radius: 5px; border: 1px solid #ccc; }
         button { margin-top: 15px; background-color: #1e90ff; color: white; border: none; padding: 10px 20px; cursor: pointer; border-radius: 5px; }
         button:hover { background-color: #63b3ed; }
         a { text-decoration: none; color: white; background-color: #1e90ff; padding: 8px 16px; border-radius: 5px; display: inline-block; margin-bottom: 15px; }
@@ -18,8 +18,10 @@
 <body>
     <h1>Ajouter un produit</h1>
 
-    <a href="/dashboard">⬅ Retour au dashboard</a>
+    <!-- Retour au dashboard -->
+    <a href="/">⬅ Retour au dashboard</a>
 
+    <!-- Formulaire d'ajout -->
     <form action="/add-product" method="post">
         <label for="name">Nom du produit :</label>
         <input type="text" id="name" name="name" required>
@@ -32,21 +34,5 @@
 
         <button type="submit">Ajouter le produit</button>
     </form>
-
-    <h2>Ajouter un produit</h2>
-<form action="/add-product" method="post">
-    <label>Nom du produit:</label>
-    <input type="text" name="name" required><br><br>
-
-    <label>Quantité:</label>
-    <input type="number" name="quantity" min="1" required><br><br>
-
-    <label>Prix (FCFA):</label>
-    <input type="number" name="price" step="0.01" min="0" required><br><br>
-
-    <button type="submit">Ajouter</button>
-</form>
-
-
 </body>
 </html>

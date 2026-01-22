@@ -1,86 +1,66 @@
-<!DOCTYPE html>
-<html lang="fr">
-<head>
-    <meta charset="UTF-8">
-    <title>Connexion</title>
-    <style>
-        html, body {
-            height: 100%;
-            margin: 0;
-            padding: 0;
-            font-family: Arial, sans-serif;
-            background: #f0f2f5;
-        }
+{% extends "base.html" %}
+{% block title %}Connexion{% endblock %}
 
-        /* Conteneur parent pour centrer absolument */
-        .login-wrapper {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100%;
-        }
+{% block content %}
+<style>
+    body {
+        font-family: Arial, sans-serif;
+        background: linear-gradient(135deg, #0078D7, #00B4D8);
+        height: 100vh;
+        margin: 0;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+    }
+    .login-container {
+        background: white;
+        padding: 40px;
+        border-radius: 10px;
+        box-shadow: 0px 4px 20px rgba(0,0,0,0.2);
+        width: 350px;
+        text-align: center;
+    }
+    .login-container h2 {
+        margin-bottom: 20px;
+        color: #0078D7;
+    }
+    .login-container input {
+        width: 100%;
+        padding: 12px;
+        margin: 10px 0;
+        border: 1px solid #ccc;
+        border-radius: 6px;
+        font-size: 14px;
+    }
+    .login-container button {
+        width: 100%;
+        padding: 12px;
+        background: #0078D7;
+        color: white;
+        border: none;
+        border-radius: 6px;
+        font-size: 16px;
+        cursor: pointer;
+        transition: background 0.3s ease;
+    }
+    .login-container button:hover {
+        background: #005fa3;
+    }
+    .error {
+        color: red;
+        margin-bottom: 15px;
+    }
+</style>
 
-        .login-container {
-            background: #fff;
-            padding: 40px 50px;
-            border-radius: 10px;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
-            width: 350px;
-            text-align: center;
-        }
-
-        .login-container h1 {
-            margin-bottom: 30px;
-            color: #333;
-        }
-
-        .login-container input[type="text"],
-        .login-container input[type="password"] {
-            width: 100%;
-            padding: 12px 15px;
-            margin: 10px 0;
-            border-radius: 5px;
-            border: 1px solid #ccc;
-            font-size: 16px;
-        }
-
-        .login-container button {
-            width: 100%;
-            padding: 12px;
-            background-color: #4CAF50;
-            border: none;
-            border-radius: 5px;
-            color: white;
-            font-size: 16px;
-            cursor: pointer;
-            margin-top: 15px;
-        }
-
-        .login-container button:hover {
-            background-color: #45a049;
-        }
-
-        .error-message {
-            color: red;
-            margin-bottom: 15px;
-        }
-    </style>
-</head>
-<body>
-    <div class="login-wrapper">
-        <div class="login-container">
-            <h1>Connexion</h1>
-
-            {% if error %}
-                <div class="error-message">{{ error }}</div>
-            {% endif %}
-
-            <form method="post" action="/login">
-                <input type="text" name="username" placeholder="Nom d'utilisateur" required>
-                <input type="password" name="password" placeholder="Mot de passe" required>
-                <button type="submit">Se connecter</button>
-            </form>
-        </div>
-    </div>
-</body>
-</html>
+<div class="login-container">
+    <h2>🔑 Connexion</h2>
+    {% if error %}
+        <p class="error">{{ error }}</p>
+    {% endif %}
+    <form action="/login" method="post">
+        <input type="text" name="username" placeholder="Nom d'utilisateur" required>
+        <input type="password" name="password" placeholder="Mot de passe" required>
+        <button type="submit">Se connecter</button>
+    </form>
+</div>
+{% endblock %}

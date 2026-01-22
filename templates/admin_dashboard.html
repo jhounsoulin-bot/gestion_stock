@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+{% block title %}Admin Dashboard{% endblock %}
+
+{% block content %}
+<h2>Statistiques de ventes</h2>
+<ul>
+  <li>Ventes journalières : {{ daily_sales }} FCFA</li>
+  <li>Ventes hebdomadaires : {{ weekly_sales }} FCFA</li>
+  <li>Ventes mensuelles : {{ monthly_sales }} FCFA</li>
+</ul>
+
+<h2>Produits</h2>
+<table border="1" cellpadding="5" cellspacing="0" style="width:100%; max-width:900px;">
+  <thead>
+    <tr>
+      <th>Nom</th>
+      <th>Quantité initiale</th>
+      <th>Quantité vendue</th>
+      <th>Quantité restante</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for p in product_stats %}
+    <tr>
+      <td>{{ p.name }}</td>
+      <td>{{ p.initial }}</td>
+      <td>{{ p.sold }}</td>
+      <td>{{ p.remaining }}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+<hr>
+
+<h2>🔥 Top 3 produits les plus vendus</h2>
+<ul>
+  {% for p in top_3 %}
+  <li>{{ p.name }} — {{ p.sold }} vendus</li>
+  {% endfor %}
+</ul>
+
+<h2>❄️ Top 3 produits les moins vendus</h2>
+<ul>
+  {% for p in bottom_3 %}
+  <li>{{ p.name }} — {{ p.sold }} vendus</li>
+  {% endfor %}
+</ul>
+
+<hr>
+
+<h2>⚠️ Alertes stock faible</h2>
+{% if alerts %}
+<ul style="color:red;">
+  {% for p in alerts %}
+  <li>{{ p.name }} — reste {{ p.remaining }}</li>
+  {% endfor %}
+</ul>
+{% else %}
+<p>Aucun produit en dessous du seuil critique.</p>
+{% endif %}
+{% endblock %}
