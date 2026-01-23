@@ -9,7 +9,12 @@ from passlib.context import CryptContext
 from starlette.middleware.sessions import SessionMiddleware
 
 # ✅ Application
-app = FastAPI(title="Gestion Stock API")
+app = FastAPI(
+    title="Gestion Stock API",
+    docs_url="/docs",
+    redoc_url="/redoc"
+)
+
 templates = Jinja2Templates(directory="templates")
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
