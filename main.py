@@ -1,11 +1,10 @@
 from fastapi import FastAPI, Depends, HTTPException, Request, Form
 from fastapi.templating import Jinja2Templates
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse, RedirectResponse, HTMLResponse
-from sqlalchemy import create_engine, Column, Integer, String, Float, ForeignKey, DateTime, func, text
+from fastapi.responses import RedirectResponse, HTMLResponse
+from sqlalchemy import create_engine, Column, Integer, String, Float, ForeignKey, DateTime, func
 from sqlalchemy.orm import sessionmaker, declarative_base, relationship, Session
 import datetime, os
-import pdfkit
 from passlib.context import CryptContext
 from starlette.middleware.sessions import SessionMiddleware
 
@@ -18,7 +17,7 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 app.add_middleware(SessionMiddleware, secret_key="ton_secret_ultra_long_et_imprevisible")
 
 # ✅ Connexion PostgreSQL via Render
-DATABASE_URL = os.getenv("DATABASE_URL")  # Render fournit cette variable
+DATABASE_URL = os.getenv("DATABASE_URL")
 engine = create_engine(DATABASE_URL, echo=False, pool_pre_ping=True)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
@@ -198,3 +197,22 @@ def reset_db(request: Request, db: Session = Depends(get_db)):
     db.query(Product).delete()
     db.commit()
     return {"message": "Toutes les ventes, factures et produits ont été réinitialisés."}
+
+# -----------------------------
+# Facture HTML
+# -----------------------------
+@app.get("/invoice/{invoice_id}")
+def view_invoice(invoice_id: int, request: Request, db: Session = Depends(get_db)):
+    if "user" not in request.session:
+        return RedirectResponse(url="/login", status_code=303)
+    invoice = db.query(Invoice).filter(Invoice.id == invoice_id).first()
+    if not invoice:
+        raise HTTPException(status_code=404, detail="Facture introuvable")
+    sales = db.query(Sale).filter(Sale.invoice_id == invoice_id).all()
+    total = sum(s.total_price for s in sales)
+    return templates.TemplateResponse("invoice.html", {
+        "request": request,
+        "invoice": invoice,
+        "sales": sales,
+        "total": total
+    })
