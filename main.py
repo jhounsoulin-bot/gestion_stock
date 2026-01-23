@@ -43,7 +43,10 @@ class User(Base):
         return pwd_context.verify(password, self.password_hash)
 
     def set_password(self, password: str):
-        self.password_hash = pwd_context.hash(password)
+    if not password or len(password.encode("utf-8")) > 72:
+        raise ValueError("Mot de passe trop long ou vide")
+    self.password_hash = pwd_context.hash(password)
+
 
 class Product(Base):
     __tablename__ = "products"
