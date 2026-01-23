@@ -118,6 +118,13 @@ def products_page(request: Request, db: Session = Depends(get_db)):
     products = db.query(Product).all()
     return templates.TemplateResponse("products.html", {"request": request, "products": products})
 
+@app.get("/add-product")
+def add_product_page(request: Request):
+    if "user" not in request.session:
+        return RedirectResponse(url="/login", status_code=303)
+    return templates.TemplateResponse("add_product.html", {"request": request})
+
+
 @app.post("/add-product")
 def submit_product(request: Request, name: str = Form(...), quantity: float = Form(...), price: float = Form(...), db: Session = Depends(get_db)):
     if "user" not in request.session:
@@ -135,6 +142,14 @@ def sales_page(request: Request, db: Session = Depends(get_db)):
     sales = db.query(Sale).order_by(Sale.date.desc()).all()
     products = db.query(Product).all()
     return templates.TemplateResponse("sales.html", {"request": request, "sales": sales, "products": products})
+
+@app.get("/create-sale")
+def create_sale_page(request: Request, db: Session = Depends(get_db)):
+    if "user" not in request.session:
+        return RedirectResponse(url="/login", status_code=303)
+    products = db.query(Product).all()
+    return templates.TemplateResponse("create_sale.html", {"request": request, "products": products})
+
 
 @app.post("/sales")
 def create_sale(request: Request, product_id: int = Form(...), client_name: str = Form(...), quantity_sold: float = Form(...), db: Session = Depends(get_db)):
@@ -188,3 +203,21 @@ def view_invoice(invoice_id: int, request: Request, db: Session = Depends(get_db
         "sales": sales,
         "total": total
     })
+
+
+@app.get("/invoice-page")
+def invoice_page(request: Request, db: Session = Depends(get_db)):
+    if "user" not in request.session:
+        return RedirectResponse(url="/login", status_code=303)
+    invoices = db.query(Invoice).order_by(Invoice.date.desc()).all()
+    return templates.TemplateResponse("invoices.html", {"request": request, "invoices": invoices})
+
+@app.post("/create-invoice")
+def create_invoice(request: Request, client_name: str = Form(...), db: Session = Depends(get_db)):
+    if "user" not in request.session:
+        return RedirectResponse(url="/login", status_code=303)
+    invoice = Invoice(client_name=client_name)
+    db.add(invoice)
+    db.commit()
+    db.refresh(invoice)
+    return RedirectResponse(url=f"/invoice/{invoice.id}", status_code=303)
