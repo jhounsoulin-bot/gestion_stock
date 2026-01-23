@@ -4,7 +4,7 @@
 {% block content %}
 <h2 style="text-align:center;">FACTURE NIVAL IMPACT</h2>
 <p><strong>Client :</strong> {{ invoice.client_name }}</p>
-<p><strong>Date :</strong> {{ invoice.date }}</p>
+<p><strong>Date :</strong> {{ invoice.date.strftime('%d/%m/%Y %H:%M') }}</p>
 
 <table class="table">
   <thead>
@@ -20,8 +20,8 @@
     <tr>
       <td>{{ sale.product.name }}</td>
       <td>{{ sale.quantity_sold }}</td>
-      <td>{{ sale.product.price }}</td>
-      <td>{{ sale.total_price }}</td>
+      <td>{{ "%.2f"|format(sale.product.price) }} FCFA</td>
+      <td>{{ "%.2f"|format(sale.total_price) }} FCFA</td>
     </tr>
     {% endfor %}
   </tbody>
@@ -58,12 +58,10 @@
 
 <hr>
 
-<!-- ✅ Bouton de téléchargement PDF -->
-<hr>
-<a href="/download-invoice/{{ invoice.id }}" class="btn" target="_blank">
-  📥 Télécharger la facture en PDF
-</a>
-
+<!-- ✅ Bouton Imprimer -->
+<div style="text-align:center; margin-top:20px;">
+  <button onclick="window.print()" class="btn">🖨️ Imprimer la facture</button>
+</div>
 
 <script>
 function updateTotal() {

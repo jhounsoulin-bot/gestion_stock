@@ -21,6 +21,8 @@
       <th>Quantité</th>
       <th>Total (FCFA)</th>
       <th>Date</th>
+      <th>Facture</th>
+      <th>Action</th>
     </tr>
   </thead>
   <tbody>
@@ -32,6 +34,16 @@
       <td>{{ sale.quantity_sold }}</td>
       <td>{{ sale.total_price }}</td>
       <td>{{ sale.date }}</td>
+      <td>
+        <a href="/invoice/{{ sale.invoice_id }}" class="btn btn-primary">
+          📄 Voir facture
+        </a>
+      </td>
+      <td>
+        <button onclick="window.open('/invoice/{{ sale.invoice_id }}','_blank'); window.print();" class="btn btn-secondary">
+          🖨️ Imprimer
+        </button>
+      </td>
     </tr>
     {% endfor %}
   </tbody>
