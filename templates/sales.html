@@ -3,7 +3,7 @@
 
 {% block content %}
 <h2>Démarrer une facture</h2>
-<form action="/start-invoice" method="post" class="card">
+<form action="/create-invoice" method="post" class="card">
   <label>Client :</label>
   <input type="text" name="client_name" required>
   <button type="submit">Créer la facture</button>
@@ -32,8 +32,8 @@
       <td>{{ sale.client_name }}</td>
       <td>{{ sale.username }}</td>
       <td>{{ sale.quantity_sold }}</td>
-      <td>{{ sale.total_price }}</td>
-      <td>{{ sale.date }}</td>
+      <td>{{ "%.2f"|format(sale.total_price) }}</td>
+      <td>{{ sale.date.strftime('%d/%m/%Y %H:%M') }}</td>
       <td>
         <a href="/invoice/{{ sale.invoice_id }}" class="btn btn-primary">
           📄 Voir facture

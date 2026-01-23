@@ -28,15 +28,14 @@
 </table>
 
 <p style="text-align:right; font-weight:bold;">
-  Total facture : {{ sales | sum(attribute='total_price') }} FCFA
+  Total facture : {{ total }} FCFA
 </p>
 
 <hr>
 
 <h2>Ajouter un produit à la facture</h2>
-<form action="/add-to-invoice/{{ invoice.id }}" method="post">
-  <label>Vendeur :</label>
-  <input type="text" name="username" required><br><br>
+<form action="/sales" method="post">
+  <input type="hidden" name="invoice_id" value="{{ invoice.id }}">
 
   <label>Produit :</label>
   <select name="product_id" required onchange="updateTotal()">
@@ -46,6 +45,9 @@
     </option>
     {% endfor %}
   </select><br><br>
+
+  <label>Client :</label>
+  <input type="text" name="client_name" value="{{ invoice.client_name }}" required><br><br>
 
   <label>Quantité :</label>
   <input type="number" step="0.5" name="quantity_sold" id="quantity_sold" required oninput="updateTotal()"><br><br>

@@ -152,22 +152,55 @@ def create_sale_page(request: Request, db: Session = Depends(get_db)):
 
 
 @app.post("/sales")
-def create_sale(request: Request, product_id: int = Form(...), client_name: str = Form(...), quantity_sold: float = Form(...), db: Session = Depends(get_db)):
+def create_sale(
+    request: Request,
+    product_id: int = Form(...),
+    client_name: str = Form(...),
+    quantity_sold: float = Form(...),
+    invoice_id: int = Form(None),   # ✅ nouveau champ optionnel
+    db: Session = Depends(get_db)
+):
     if "user" not in request.session:
         return RedirectResponse(url="/login", status_code=303)
+
     product = db.query(Product).filter(Product.id == product_id).first()
     if not product or product.quantity < quantity_sold:
         raise HTTPException(status_code=400, detail="Stock insuffisant")
+
     total_price = round(product.price * quantity_sold, 2)
-    invoice = Invoice(client_name=client_name)
-    db.add(invoice)
-    db.commit()
-    db.refresh(invoice)
-    new_sale = Sale(product_id=product_id, username=request.session["user"], client_name=client_name, quantity_sold=quantity_sold, total_price=total_price, invoice_id=invoice.id)
+
+    # ✅ Si invoice_id est fourni, on rattache la vente à cette facture
+    if invoice_id:
+        invoice = db.query(Invoice).filter(Invoice.id == invoice_id).first()
+        if not invoice:
+            raise HTTPException(status_code=404, detail="Facture introuvable")
+    else:
+        # Sinon, on crée une nouvelle facture
+        invoice = Invoice(client_name=client_name)
+        db.add(invoice)
+        db.commit()
+        db.refresh(invoice)
+
+    new_sale = Sale(
+        product_id=product_id,
+        username=request.session["user"],
+        client_name=client_name,
+        quantity_sold=quantity_sold,
+        total_price=total_price,
+        invoice_id=invoice.id
+    )
     db.add(new_sale)
+
+    # Mise à jour du stock
     product.quantity -= quantity_sold
     db.commit()
-    return RedirectResponse(url="/sales-page", status_code=303)
+
+    # ✅ Si on ajoute à une facture existante → redirige vers la facture
+    if invoice_id:
+        return RedirectResponse(url=f"/invoice/{invoice.id}", status_code=303)
+    else:
+        return RedirectResponse(url="/sales-page", status_code=303)
+
 
 @app.get("/admin-dashboard")
 def admin_dashboard(request: Request, db: Session = Depends(get_db)):
@@ -221,3 +254,38 @@ def create_invoice(request: Request, client_name: str = Form(...), db: Session =
     db.commit()
     db.refresh(invoice)
     return RedirectResponse(url=f"/invoice/{invoice.id}", status_code=303)
+
+
+@app.get("/reapprovisionnement/{product_id}")
+def reapprovisionnement_page(product_id: int, request: Request, db: Session = Depends(get_db)):
+    if "user" not in request.session:
+        return RedirectResponse(url="/login", status_code=303)
+    product = db.query(Product).filter(Product.id == product_id).first()
+    if not product:
+        raise HTTPException(status_code=404, detail="Produit introuvable")
+    return templates.TemplateResponse("reapprovisionnement.html", {"request": request, "product": product})
+
+@app.post("/reapprovisionnement/{product_id}")
+def reapprovisionnement(
+    product_id: int,
+    request: Request,
+    added_quantity: float = Form(...),
+    new_price: float = Form(...),
+    db: Session = Depends(get_db)
+):
+    if "user" not in request.session:
+        return RedirectResponse(url="/login", status_code=303)
+
+    product = db.query(Product).filter(Product.id == product_id).first()
+    if not product:
+        raise HTTPException(status_code=404, detail="Produit introuvable")
+
+    # ✅ Mise à jour du stock et du prix
+    product.quantity += added_quantity
+    product.total_quantity += added_quantity
+    product.price = new_price
+
+    db.commit()
+    db.refresh(product)
+
+    return RedirectResponse(url="/products-page", status_code=303)
