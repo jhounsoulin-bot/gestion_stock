@@ -86,11 +86,14 @@ def login_page(request: Request):
 
 @app.post("/login")
 def login(request: Request, username: str = Form(...), password: str = Form(...), db: Session = Depends(get_db)):
+    if not password or len(password.encode("utf-8")) > 72:
+        return templates.TemplateResponse("login.html", {"request": request, "error": "Mot de passe invalide"})
     user = db.query(User).filter(User.username == username).first()
     if not user or not user.verify_password(password):
         return templates.TemplateResponse("login.html", {"request": request, "error": "Identifiants invalides"})
     request.session["user"] = user.username
     return RedirectResponse(url="/sales-page", status_code=303)
+
 
 @app.get("/logout")
 def logout(request: Request):
