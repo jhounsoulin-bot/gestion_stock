@@ -8,30 +8,17 @@ import datetime, os
 from passlib.context import CryptContext
 from starlette.middleware.sessions import SessionMiddleware
 
-# ✅ Application
-app = FastAPI(
-    title="Gestion Stock API",
-    docs_url="/docs",
-    redoc_url="/redoc"
-)
-
+app = FastAPI(title="Gestion Stock API", docs_url="/docs", redoc_url="/redoc")
 templates = Jinja2Templates(directory="templates")
 app.mount("/static", StaticFiles(directory="static"), name="static")
-
-# ✅ Sessions
 app.add_middleware(SessionMiddleware, secret_key="ton_secret_ultra_long_et_imprevisible")
 
-# ✅ Connexion PostgreSQL via Render
 DATABASE_URL = os.getenv("DATABASE_URL")
 engine = create_engine(DATABASE_URL, echo=False, pool_pre_ping=True)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
-
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
-# -----------------------------
-# Modèles
-# -----------------------------
 class User(Base):
     __tablename__ = "users"
     id = Column(Integer, primary_key=True, index=True)
@@ -43,10 +30,11 @@ class User(Base):
         return pwd_context.verify(password, self.password_hash)
 
     def set_password(self, password: str):
-    if not password or len(password.encode("utf-8")) > 72:
-        raise ValueError("Mot de passe trop long ou vide")
-    self.password_hash = pwd_context.hash(password)
-
+        if not password:
+            raise ValueError("Le mot de passe ne peut pas être vide")
+        if len(password.encode("utf-8")) > 72:
+            raise ValueError("Le mot de passe dépasse 72 caractères (limite bcrypt)")
+        self.password_hash = pwd_context.hash(password)
 
 class Product(Base):
     __tablename__ = "products"
@@ -77,16 +65,10 @@ class Sale(Base):
     invoice_id = Column(Integer, ForeignKey("invoices.id"))
     product = relationship("Product", backref="sales")
 
-# -----------------------------
-# Création des tables
-# -----------------------------
 @app.on_event("startup")
 def on_startup():
     Base.metadata.create_all(bind=engine)
 
-# -----------------------------
-# Dépendance DB
-# -----------------------------
 def get_db():
     db = SessionLocal()
     try:
@@ -94,9 +76,6 @@ def get_db():
     finally:
         db.close()
 
-# -----------------------------
-# Routes principales
-# -----------------------------
 @app.get("/", response_class=HTMLResponse)
 def root():
     return RedirectResponse(url="/login", status_code=303)
@@ -118,9 +97,6 @@ def logout(request: Request):
     request.session.clear()
     return RedirectResponse(url="/login", status_code=303)
 
-# -----------------------------
-# Initialisation admin
-# -----------------------------
 @app.get("/init-admin")
 def init_admin(db: Session = Depends(get_db)):
     existing = db.query(User).filter(User.username == "admin").first()
@@ -132,9 +108,6 @@ def init_admin(db: Session = Depends(get_db)):
     db.commit()
     return {"message": "Admin créé avec succès"}
 
-# -----------------------------
-# Produits
-# -----------------------------
 @app.get("/products-page")
 def products_page(request: Request, db: Session = Depends(get_db)):
     if "user" not in request.session:
@@ -152,9 +125,6 @@ def submit_product(request: Request, name: str = Form(...), quantity: float = Fo
     db.refresh(new_product)
     return RedirectResponse(url="/products-page", status_code=303)
 
-# -----------------------------
-# Ventes
-# -----------------------------
 @app.get("/sales-page")
 def sales_page(request: Request, db: Session = Depends(get_db)):
     if "user" not in request.session:
@@ -181,9 +151,6 @@ def create_sale(request: Request, product_id: int = Form(...), client_name: str 
     db.commit()
     return RedirectResponse(url="/sales-page", status_code=303)
 
-# -----------------------------
-# Admin Dashboard
-# -----------------------------
 @app.get("/admin-dashboard")
 def admin_dashboard(request: Request, db: Session = Depends(get_db)):
     if "user" not in request.session:
@@ -193,9 +160,6 @@ def admin_dashboard(request: Request, db: Session = Depends(get_db)):
     products = db.query(Product).all()
     return templates.TemplateResponse("admin_dashboard.html", {"request": request, "daily_sales": daily_sales, "products": products})
 
-# -----------------------------
-# Reset complet
-# -----------------------------
 @app.get("/reset-db")
 def reset_db(request: Request, db: Session = Depends(get_db)):
     if "user" not in request.session:
@@ -206,9 +170,6 @@ def reset_db(request: Request, db: Session = Depends(get_db)):
     db.commit()
     return {"message": "Toutes les ventes, factures et produits ont été réinitialisés."}
 
-# -----------------------------
-# Facture HTML
-# -----------------------------
 @app.get("/invoice/{invoice_id}")
 def view_invoice(invoice_id: int, request: Request, db: Session = Depends(get_db)):
     if "user" not in request.session:
