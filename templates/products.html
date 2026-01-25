@@ -18,14 +18,15 @@
     <tr>
       <td>{{ product.name }}</td>
       <td>{{ product.quantity }}</td>
-      <td>{{ product.price }}</td>
+      <td>{{ "%.2f"|format(product.price) }}</td>
       <td>
-        <a href="/restock/{{ product.id }}" class="btn">Réapprovisionner</a>
+        <!-- ✅ Correction : route cohérente avec le backend -->
+        <a href="/reapprovisionnement/{{ product.id }}" class="btn btn-warning">Réapprovisionner</a>
       </td>
     </tr>
     {% endfor %}
   </tbody>
 </table>
 
-<a href="/add-product" class="btn">➕ Ajouter un produit</a>
+<a href="/add-product" class="btn btn-primary">➕ Ajouter un produit</a>
 {% endblock %}
