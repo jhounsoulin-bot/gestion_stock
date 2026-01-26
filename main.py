@@ -19,7 +19,20 @@ DATABASE_URL = os.getenv("DATABASE_URL")
 engine = create_engine(DATABASE_URL, echo=False, pool_pre_ping=True)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+
+# Configuration Passlib avec Argon2
+pwd_context = CryptContext(
+    schemes=["argon2", "pbkdf2_sha256"],
+    default="argon2",
+    deprecated="auto"
+)
+
+def hash_password(password: str) -> str:
+    return pwd_context.hash(password)
+
+def verify_password(password: str, hashed: str) -> bool:
+    return pwd_context.verify(password, hashed)
+
 
 class User(Base):
     __tablename__ = "users"
@@ -193,10 +206,72 @@ def create_sale(request: Request, product_id: int = Form(...), client_name: str 
 def admin_dashboard(request: Request, db: Session = Depends(get_db)):
     if "user" not in request.session:
         return RedirectResponse(url="/login", status_code=303)
+
     today = datetime.date.today()
-    daily_sales = db.query(func.sum(Sale.total_price)).filter(func.date(Sale.date) == today).scalar() or 0
+
+    # --- Ventes journalières ---
+    daily_sales = db.query(func.sum(Sale.total_price))\
+        .filter(func.date(Sale.date) == today).scalar() or 0
+
+    # --- Ventes hebdomadaires ---
+    start_week = today - datetime.timedelta(days=today.weekday())  # lundi
+    weekly_sales = db.query(func.sum(Sale.total_price))\
+        .filter(Sale.date >= start_week).scalar() or 0
+
+    # --- Ventes mensuelles ---
+    start_month = today.replace(day=1)
+    monthly_sales = db.query(func.sum(Sale.total_price))\
+        .filter(Sale.date >= start_month).scalar() or 0
+
+    # --- Ventes par mois (janvier → décembre) ---
+    monthly_totals = []
+    for month in range(1, 13):
+        start = datetime.date(today.year, month, 1)
+        if month == 12:
+            end = datetime.date(today.year + 1, 1, 1)
+        else:
+            end = datetime.date(today.year, month + 1, 1)
+
+        total = db.query(func.sum(Sale.total_price))\
+            .filter(Sale.date >= start, Sale.date < end).scalar() or 0
+
+        monthly_totals.append({
+            "month": start.strftime("%B"),  # Nom du mois (Janvier, Février…)
+            "total": total
+        })
+
+    # --- Stats produits ---
     products = db.query(Product).all()
-    return templates.TemplateResponse("admin_dashboard.html", {"request": request, "daily_sales": daily_sales, "products": products})
+    product_stats = []
+    for p in products:
+        sold_qty = sum(s.quantity_sold for s in p.sales)
+        remaining = p.quantity
+        initial = p.total_quantity
+        product_stats.append({
+            "name": p.name,
+            "initial": initial,
+            "sold": sold_qty,
+            "remaining": remaining
+        })
+
+    # --- Top 3 / Bottom 3 ---
+    top_3 = sorted(product_stats, key=lambda x: x["sold"], reverse=True)[:3]
+    bottom_3 = sorted(product_stats, key=lambda x: x["sold"])[:3]
+
+    # --- Alertes stock faible ---
+    alerts = [p for p in product_stats if p["remaining"] < 5]
+
+    return templates.TemplateResponse("admin_dashboard.html", {
+        "request": request,
+        "daily_sales": daily_sales,
+        "weekly_sales": weekly_sales,
+        "monthly_sales": monthly_sales,
+        "product_stats": product_stats,
+        "top_3": top_3,
+        "bottom_3": bottom_3,
+        "alerts": alerts,
+        "monthly_totals": monthly_totals
+    })
 
 @app.get("/reset-db")
 def reset_db(request: Request, db: Session = Depends(get_db)):

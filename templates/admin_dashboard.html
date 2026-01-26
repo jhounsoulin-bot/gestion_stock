@@ -49,6 +49,25 @@
 
 <hr>
 
+<h2>📊 Ventes par mois</h2>
+<table border="1" cellpadding="5" cellspacing="0" style="width:100%; max-width:600px;">
+  <thead>
+    <tr>
+      <th>Mois</th>
+      <th>Total ventes (FCFA)</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for m in monthly_totals %}
+    <tr>
+      <td>{{ m.month }}</td>
+      <td>{{ m.total }}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+
 <h2>⚠️ Alertes stock faible</h2>
 {% if alerts %}
 <ul style="color:red;">
