@@ -1,12 +1,14 @@
 from fastapi import FastAPI, Depends, HTTPException, Request, Form
 from fastapi.templating import Jinja2Templates
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import RedirectResponse, HTMLResponse
+from fastapi.responses import RedirectResponse, HTMLResponse, StreamingResponse
 from sqlalchemy import create_engine, Column, Integer, String, Float, ForeignKey, DateTime, func
 from sqlalchemy.orm import sessionmaker, declarative_base, relationship, Session
-import datetime, os
+import datetime, os, io
 from passlib.context import CryptContext
 from starlette.middleware.sessions import SessionMiddleware
+from reportlab.lib.pagesizes import A4
+from reportlab.pdfgen import canvas
 
 app = FastAPI(title="Gestion Stock API", docs_url="/docs", redoc_url="/redoc")
 templates = Jinja2Templates(directory="templates")
@@ -76,6 +78,8 @@ def get_db():
     finally:
         db.close()
 
+# ------------------ ROUTES ------------------
+
 @app.get("/", response_class=HTMLResponse)
 def root():
     return RedirectResponse(url="/login", status_code=303)
@@ -94,7 +98,6 @@ def login(request: Request, username: str = Form(...), password: str = Form(...)
     request.session["user"] = user.username
     return RedirectResponse(url="/sales-page", status_code=303)
 
-
 @app.get("/logout")
 def logout(request: Request):
     request.session.clear()
@@ -111,6 +114,8 @@ def init_admin(db: Session = Depends(get_db)):
     db.commit()
     return {"message": "Admin créé avec succès"}
 
+# ------------------ PRODUCTS ------------------
+
 @app.get("/products-page")
 def products_page(request: Request, db: Session = Depends(get_db)):
     if "user" not in request.session:
@@ -124,7 +129,6 @@ def add_product_page(request: Request):
         return RedirectResponse(url="/login", status_code=303)
     return templates.TemplateResponse("add_product.html", {"request": request})
 
-
 @app.post("/add-product")
 def submit_product(request: Request, name: str = Form(...), quantity: float = Form(...), price: float = Form(...), db: Session = Depends(get_db)):
     if "user" not in request.session:
@@ -134,6 +138,8 @@ def submit_product(request: Request, name: str = Form(...), quantity: float = Fo
     db.commit()
     db.refresh(new_product)
     return RedirectResponse(url="/products-page", status_code=303)
+
+# ------------------ SALES ------------------
 
 @app.get("/sales-page")
 def sales_page(request: Request, db: Session = Depends(get_db)):
@@ -150,16 +156,8 @@ def create_sale_page(request: Request, db: Session = Depends(get_db)):
     products = db.query(Product).all()
     return templates.TemplateResponse("create_sale.html", {"request": request, "products": products})
 
-
 @app.post("/sales")
-def create_sale(
-    request: Request,
-    product_id: int = Form(...),
-    client_name: str = Form(...),
-    quantity_sold: float = Form(...),
-    invoice_id: int = Form(None),   # ✅ nouveau champ optionnel
-    db: Session = Depends(get_db)
-):
+def create_sale(request: Request, product_id: int = Form(...), client_name: str = Form(...), quantity_sold: float = Form(...), invoice_id: int = Form(None), db: Session = Depends(get_db)):
     if "user" not in request.session:
         return RedirectResponse(url="/login", status_code=303)
 
@@ -169,38 +167,27 @@ def create_sale(
 
     total_price = round(product.price * quantity_sold, 2)
 
-    # ✅ Si invoice_id est fourni, on rattache la vente à cette facture
     if invoice_id:
         invoice = db.query(Invoice).filter(Invoice.id == invoice_id).first()
         if not invoice:
             raise HTTPException(status_code=404, detail="Facture introuvable")
     else:
-        # Sinon, on crée une nouvelle facture
         invoice = Invoice(client_name=client_name)
         db.add(invoice)
         db.commit()
         db.refresh(invoice)
 
-    new_sale = Sale(
-        product_id=product_id,
-        username=request.session["user"],
-        client_name=client_name,
-        quantity_sold=quantity_sold,
-        total_price=total_price,
-        invoice_id=invoice.id
-    )
+    new_sale = Sale(product_id=product_id, username=request.session["user"], client_name=client_name, quantity_sold=quantity_sold, total_price=total_price, invoice_id=invoice.id)
     db.add(new_sale)
-
-    # Mise à jour du stock
     product.quantity -= quantity_sold
     db.commit()
 
-    # ✅ Si on ajoute à une facture existante → redirige vers la facture
     if invoice_id:
         return RedirectResponse(url=f"/invoice/{invoice.id}", status_code=303)
     else:
         return RedirectResponse(url="/sales-page", status_code=303)
 
+# ------------------ ADMIN ------------------
 
 @app.get("/admin-dashboard")
 def admin_dashboard(request: Request, db: Session = Depends(get_db)):
@@ -221,6 +208,9 @@ def reset_db(request: Request, db: Session = Depends(get_db)):
     db.commit()
     return {"message": "Toutes les ventes, factures et produits ont été réinitialisés."}
 
+
+# ------------------ INVOICES ------------------
+
 @app.get("/invoice/{invoice_id}")
 def view_invoice(invoice_id: int, request: Request, db: Session = Depends(get_db)):
     if "user" not in request.session:
@@ -236,7 +226,6 @@ def view_invoice(invoice_id: int, request: Request, db: Session = Depends(get_db
         "sales": sales,
         "total": total
     })
-
 
 @app.get("/invoice-page")
 def invoice_page(request: Request, db: Session = Depends(get_db)):
@@ -255,6 +244,60 @@ def create_invoice(request: Request, client_name: str = Form(...), db: Session =
     db.refresh(invoice)
     return RedirectResponse(url=f"/invoice/{invoice.id}", status_code=303)
 
+# ------------------ PDF GENERATION ------------------
+
+def generate_invoice_pdf(invoice, sales, total):
+    buffer = io.BytesIO()
+    c = canvas.Canvas(buffer, pagesize=A4)
+    width, height = A4
+
+    # Titre
+    c.setFont("Helvetica-Bold", 16)
+    c.drawString(50, height - 50, f"Facture #{invoice.id}")
+
+    # Client
+    c.setFont("Helvetica", 12)
+    c.drawString(50, height - 80, f"Client : {invoice.client_name}")
+    c.drawString(50, height - 100, f"Date : {invoice.date.strftime('%d/%m/%Y')}")
+
+    # Tableau des ventes
+    y = height - 150
+    c.setFont("Helvetica-Bold", 12)
+    c.drawString(50, y, "Produit")
+    c.drawString(250, y, "Quantité")
+    c.drawString(350, y, "Prix total")
+
+    c.setFont("Helvetica", 12)
+    for sale in sales:
+        y -= 20
+        c.drawString(50, y, sale.product.name)
+        c.drawString(250, y, str(sale.quantity_sold))
+        c.drawString(350, y, f"{sale.total_price:.2f} FCFA")
+
+    # Total
+    y -= 40
+    c.setFont("Helvetica-Bold", 12)
+    c.drawString(50, y, f"Total : {total:.2f} FCFA")
+
+    c.showPage()
+    c.save()
+    buffer.seek(0)
+    return buffer
+
+@app.get("/invoice/{invoice_id}/pdf")
+def invoice_pdf(invoice_id: int, db: Session = Depends(get_db)):
+    invoice = db.query(Invoice).filter(Invoice.id == invoice_id).first()
+    if not invoice:
+        raise HTTPException(status_code=404, detail="Facture introuvable")
+    sales = db.query(Sale).filter(Sale.invoice_id == invoice_id).all()
+    total = sum(s.total_price for s in sales)
+
+    pdf_buffer = generate_invoice_pdf(invoice, sales, total)
+    return StreamingResponse(pdf_buffer, media_type="application/pdf", headers={
+        "Content-Disposition": f"attachment; filename=facture_{invoice.id}.pdf"
+    })
+
+# ------------------ REAPPROVISIONNEMENT ------------------
 
 @app.get("/reapprovisionnement/{product_id}")
 def reapprovisionnement_page(product_id: int, request: Request, db: Session = Depends(get_db)):

@@ -65,6 +65,14 @@
   <button onclick="window.print()" class="btn">🖨️ Imprimer la facture</button>
 </div>
 
+<!-- ✅ Bouton Télécharger PDF -->
+<div style="text-align:center; margin-top:20px;">
+  <a href="/invoice/{{ invoice.id }}/pdf" class="btn btn-success" target="_blank">
+    📄 Télécharger en PDF
+  </a>
+</div>
+
+
 <script>
 function updateTotal() {
   const select = document.querySelector("select[name='product_id']");
