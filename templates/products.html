@@ -3,18 +3,10 @@
 
 {% block content %}
 
+<!-- Barre de recherche -->
 <form method="get" action="/products-page">
     <input type="text" name="q" placeholder="Rechercher un produit..." value="{{ q }}">
     <button type="submit">🔍</button>
-
-    <td>
-  <a href="/reapprovisionnement/{{ product.id }}" class="btn btn-warning">Réapprovisionner</a>
-  <a href="/delete-product/{{ product.id }}" class="btn btn-danger" 
-     onclick="return confirm('Voulez-vous vraiment supprimer {{ product.name }} ?');">
-     Supprimer
-  </a>
-</td>
-
 </form>
 
 <h2>Liste des produits</h2>
@@ -35,13 +27,19 @@
       <td>{{ product.quantity }}</td>
       <td>{{ "%.2f"|format(product.price) }}</td>
       <td>
-        <!-- ✅ Correction : route cohérente avec le backend -->
+        <!-- ✅ Actions disponibles -->
         <a href="/reapprovisionnement/{{ product.id }}" class="btn btn-warning">Réapprovisionner</a>
+        <a href="/delete-product/{{ product.id }}" class="btn btn-danger"
+           onclick="return confirm('Voulez-vous vraiment supprimer {{ product.name }} ?');">
+           Supprimer
+        </a>
       </td>
     </tr>
     {% endfor %}
   </tbody>
 </table>
 
+<!-- Bouton pour ajouter un produit -->
 <a href="/add-product" class="btn btn-primary">➕ Ajouter un produit</a>
+
 {% endblock %}
