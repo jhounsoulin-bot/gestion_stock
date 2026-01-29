@@ -27,12 +27,8 @@
       <td>{{ product.quantity }}</td>
       <td>{{ "%.2f"|format(product.price) }}</td>
       <td>
-        <!-- ✅ Actions disponibles -->
+        <!-- ✅ Seul le bouton Réapprovisionner reste -->
         <a href="/reapprovisionnement/{{ product.id }}" class="btn btn-warning">Réapprovisionner</a>
-        <a href="/delete-product/{{ product.id }}" class="btn btn-danger"
-           onclick="return confirm('Voulez-vous vraiment supprimer {{ product.name }} ?');">
-           Supprimer
-        </a>
       </td>
     </tr>
     {% endfor %}
