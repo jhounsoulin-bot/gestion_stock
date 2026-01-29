@@ -409,6 +409,7 @@ def view_invoice(invoice_id: int, request: Request, db: Session = Depends(get_db
 
 
 
+
 # ------------------ REAPPROVISIONNEMENT ------------------
 
 @app.get("/reapprovisionnement/{product_id}")
