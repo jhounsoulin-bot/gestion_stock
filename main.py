@@ -314,17 +314,24 @@ def reset_db(request: Request, db: Session = Depends(get_db)):
 def view_invoice(invoice_id: int, request: Request, db: Session = Depends(get_db)):
     if "user" not in request.session:
         return RedirectResponse(url="/login", status_code=303)
+
     invoice = db.query(Invoice).filter(Invoice.id == invoice_id).first()
     if not invoice:
         raise HTTPException(status_code=404, detail="Facture introuvable")
+
     sales = db.query(Sale).filter(Sale.invoice_id == invoice_id).all()
     total = sum(s.total_price for s in sales)
+
+    products = db.query(Product).all()
+
     return templates.TemplateResponse("invoice.html", {
         "request": request,
         "invoice": invoice,
         "sales": sales,
-        "total": total
+        "total": total,
+        "products": products
     })
+
 
 @app.get("/invoice-page")
 def invoice_page(request: Request, db: Session = Depends(get_db)):
@@ -383,29 +390,7 @@ def generate_invoice_pdf(invoice, sales, total):
     buffer.seek(0)
     return buffer
 
-@app.get("/invoice/{invoice_id}")
-def view_invoice(invoice_id: int, request: Request, db: Session = Depends(get_db)):
-    # TEMPORAIRE : ignorer la session pour test
-    # if "user" not in request.session:
-    #     return RedirectResponse(url="/login", status_code=303)
 
-    invoice = db.query(Invoice).filter(Invoice.id == invoice_id).first()
-    if not invoice:
-        raise HTTPException(status_code=404, detail="Facture introuvable")
-
-    sales = db.query(Sale).filter(Sale.invoice_id == invoice_id).all()
-    total = sum(s.total_price for s in sales)
-
-    products = db.query(Product).all()
-    print("✅ Produits chargés :", [p.name for p in products])
-
-    return templates.TemplateResponse("invoice.html", {
-        "request": request,
-        "invoice": invoice,
-        "sales": sales,
-        "total": total,
-        "products": products
-    })
 
 
 
