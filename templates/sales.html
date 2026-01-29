@@ -41,11 +41,14 @@
           📄 Voir facture
         </a>
       </td>
-      <td>
-        <button onclick="window.open('/invoice/{{ sale.invoice_id }}','_blank'); window.print();" class="btn btn-secondary">
-          🖨️ Imprimer
-        </button>
-      </td>
+      <!--
+<td>
+  <button onclick="window.open('/invoice/{{ sale.invoice_id }}','_blank'); window.print();" class="btn btn-secondary">
+    🖨️ Imprimer
+  </button>
+</td>
+-->
+
     </tr>
     {% endfor %}
   </tbody>
