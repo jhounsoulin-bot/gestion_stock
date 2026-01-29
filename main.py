@@ -395,16 +395,17 @@ def view_invoice(invoice_id: int, request: Request, db: Session = Depends(get_db
     sales = db.query(Sale).filter(Sale.invoice_id == invoice_id).all()
     total = sum(s.total_price for s in sales)
 
-    # 🔥 Charger tous les produits pour le <select>
     products = db.query(Product).all()
+    print("✅ Produits chargés :", [p.name for p in products])  # 👈 Debug visible dans les logs
 
     return templates.TemplateResponse("invoice.html", {
         "request": request,
         "invoice": invoice,
         "sales": sales,
         "total": total,
-        "products": products   # ✅ ajout ici
+        "products": products
     })
+
 
 
 
