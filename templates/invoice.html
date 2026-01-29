@@ -41,13 +41,18 @@
   <p>Nombre de produits chargés : {{ products|length }}</p>
 
   <label>Produit :</label>
-  <select name="product_id" required onchange="updateTotal()">
-    {% for product in products %}
-    <option value="{{ product.id }}" data-price="{{ product.price }}">
-      {{ product.name }} ({{ product.price }} FCFA)
-    </option>
-    {% endfor %}
-  </select><br><br>
+<input list="products" id="product_input" required oninput="updateTotalFromInput()">
+<datalist id="products">
+  {% for product in products %}
+  <option value="{{ product.name }}" data-id="{{ product.id }}" data-price="{{ product.price }}">
+    {{ product.name }} ({{ product.price }} FCFA)
+  </option>
+  {% endfor %}
+</datalist>
+
+<!-- Champ caché pour envoyer l'ID du produit -->
+<input type="hidden" name="product_id" id="product_id_hidden"><br><br>
+
 
   <label>Client :</label>
   <input type="text" name="client_name" value="{{ invoice.client_name }}" required><br><br>
@@ -78,12 +83,25 @@
 
 
 <script>
-function updateTotal() {
-  const select = document.querySelector("select[name='product_id']");
-  const option = select.options[select.selectedIndex];
-  const price = parseFloat(option.getAttribute("data-price")) || 0;
+function updateTotalFromInput() {
+  const input = document.getElementById("product_input").value;
+  const options = document.querySelectorAll("#products option");
+  let price = 0, id = null;
+
+  options.forEach(opt => {
+    if (opt.value === input) {
+      price = parseFloat(opt.getAttribute("data-price")) || 0;
+      id = opt.getAttribute("data-id");
+    }
+  });
+
+  // Mettre l’ID du produit dans le champ caché
+  document.getElementById("product_id_hidden").value = id;
+
+  // Calculer le total
   const qty = parseFloat(document.getElementById("quantity_sold").value) || 0;
   document.getElementById("total_price").value = (price * qty).toFixed(2);
 }
 </script>
+
 {% endblock %}
