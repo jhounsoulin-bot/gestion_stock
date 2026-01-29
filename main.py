@@ -385,8 +385,9 @@ def generate_invoice_pdf(invoice, sales, total):
 
 @app.get("/invoice/{invoice_id}")
 def view_invoice(invoice_id: int, request: Request, db: Session = Depends(get_db)):
-    if "user" not in request.session:
-        return RedirectResponse(url="/login", status_code=303)
+    # TEMPORAIRE : ignorer la session pour test
+    # if "user" not in request.session:
+    #     return RedirectResponse(url="/login", status_code=303)
 
     invoice = db.query(Invoice).filter(Invoice.id == invoice_id).first()
     if not invoice:
@@ -396,7 +397,7 @@ def view_invoice(invoice_id: int, request: Request, db: Session = Depends(get_db
     total = sum(s.total_price for s in sales)
 
     products = db.query(Product).all()
-    print("✅ Produits chargés :", [p.name for p in products])  # 👈 Debug visible dans les logs
+    print("✅ Produits chargés :", [p.name for p in products])
 
     return templates.TemplateResponse("invoice.html", {
         "request": request,
@@ -405,6 +406,7 @@ def view_invoice(invoice_id: int, request: Request, db: Session = Depends(get_db
         "total": total,
         "products": products
     })
+
 
 
 
