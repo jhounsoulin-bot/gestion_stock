@@ -351,6 +351,25 @@ def create_invoice(request: Request, client_name: str = Form(...), db: Session =
     return RedirectResponse(url=f"/invoice/{invoice.id}", status_code=303)
 
 # ------------------ PDF GENERATION ------------------
+@app.get("/invoice/{invoice_id}/pdf")
+def download_invoice_pdf(invoice_id: int, db: Session = Depends(get_db)):
+    invoice = db.query(Invoice).filter(Invoice.id == invoice_id).first()
+    if not invoice:
+        raise HTTPException(status_code=404, detail="Facture introuvable")
+
+    sales = db.query(Sale).filter(Sale.invoice_id == invoice_id).all()
+    total = sum(s.total_price for s in sales)
+
+    # Générer le PDF
+    buffer = generate_invoice_pdf(invoice, sales, total)
+
+    # Retourner le PDF en StreamingResponse
+    return StreamingResponse(
+        buffer,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f"attachment; filename=facture_{invoice.id}.pdf"}
+    )
+
 
 def generate_invoice_pdf(invoice, sales, total):
     buffer = io.BytesIO()
@@ -389,13 +408,6 @@ def generate_invoice_pdf(invoice, sales, total):
     c.save()
     buffer.seek(0)
     return buffer
-
-
-
-
-
-
-
 
 
 # ------------------ REAPPROVISIONNEMENT ------------------
