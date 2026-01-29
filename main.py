@@ -144,11 +144,21 @@ def init_admin(db: Session = Depends(get_db)):
 # ------------------ PRODUCTS ------------------
 
 @app.get("/products-page")
-def products_page(request: Request, db: Session = Depends(get_db)):
+def products_page(request: Request, q: str = "", db: Session = Depends(get_db)):
     if "user" not in request.session:
         return RedirectResponse(url="/login", status_code=303)
-    products = db.query(Product).all()
-    return templates.TemplateResponse("products.html", {"request": request, "products": products})
+
+    # Si un terme de recherche est fourni, filtrer les produits
+    if q:
+        products = db.query(Product).filter(Product.name.ilike(f"%{q}%")).all()
+    else:
+        products = db.query(Product).all()
+
+    return templates.TemplateResponse("products.html", {
+        "request": request,
+        "products": products,
+        "q": q
+    })
 
 @app.get("/add-product")
 def add_product_page(request: Request):
@@ -373,18 +383,30 @@ def generate_invoice_pdf(invoice, sales, total):
     buffer.seek(0)
     return buffer
 
-@app.get("/invoice/{invoice_id}/pdf")
-def invoice_pdf(invoice_id: int, db: Session = Depends(get_db)):
+@app.get("/invoice/{invoice_id}")
+def view_invoice(invoice_id: int, request: Request, db: Session = Depends(get_db)):
+    if "user" not in request.session:
+        return RedirectResponse(url="/login", status_code=303)
+
     invoice = db.query(Invoice).filter(Invoice.id == invoice_id).first()
     if not invoice:
         raise HTTPException(status_code=404, detail="Facture introuvable")
+
     sales = db.query(Sale).filter(Sale.invoice_id == invoice_id).all()
     total = sum(s.total_price for s in sales)
 
-    pdf_buffer = generate_invoice_pdf(invoice, sales, total)
-    return StreamingResponse(pdf_buffer, media_type="application/pdf", headers={
-        "Content-Disposition": f"attachment; filename=facture_{invoice.id}.pdf"
+    # 🔥 Charger tous les produits pour le <select>
+    products = db.query(Product).all()
+
+    return templates.TemplateResponse("invoice.html", {
+        "request": request,
+        "invoice": invoice,
+        "sales": sales,
+        "total": total,
+        "products": products   # ✅ ajout ici
     })
+
+
 
 # ------------------ REAPPROVISIONNEMENT ------------------
 

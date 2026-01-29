@@ -2,6 +2,12 @@
 {% block title %}Produits{% endblock %}
 
 {% block content %}
+
+<form method="get" action="/products-page">
+    <input type="text" name="q" placeholder="Rechercher un produit..." value="{{ q }}">
+    <button type="submit">🔍</button>
+</form>
+
 <h2>Liste des produits</h2>
 
 <table class="table">
