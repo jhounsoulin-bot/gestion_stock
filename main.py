@@ -152,7 +152,8 @@ def products_page(request: Request, q: str = "", db: Session = Depends(get_db)):
     if q:
         products = db.query(Product).filter(Product.name.ilike(f"%{q}%")).all()
     else:
-        products = db.query(Product).all()
+        products = db.query(Product).order_by(Product.name.asc()).all()
+
 
     return templates.TemplateResponse("products.html", {
         "request": request,
@@ -183,14 +184,14 @@ def sales_page(request: Request, db: Session = Depends(get_db)):
     if "user" not in request.session:
         return RedirectResponse(url="/login", status_code=303)
     sales = db.query(Sale).order_by(Sale.date.desc()).all()
-    products = db.query(Product).all()
+    products = db.query(Product).order_by(Product.name.asc()).all()
     return templates.TemplateResponse("sales.html", {"request": request, "sales": sales, "products": products})
 
 @app.get("/create-sale")
 def create_sale_page(request: Request, db: Session = Depends(get_db)):
     if "user" not in request.session:
         return RedirectResponse(url="/login", status_code=303)
-    products = db.query(Product).all()
+    products = db.query(Product).order_by(Product.name.asc()).all()
     return templates.TemplateResponse("create_sale.html", {"request": request, "products": products})
 
 @app.post("/sales")
@@ -322,7 +323,7 @@ def view_invoice(invoice_id: int, request: Request, db: Session = Depends(get_db
     sales = db.query(Sale).filter(Sale.invoice_id == invoice_id).all()
     total = sum(s.total_price for s in sales)
 
-    products = db.query(Product).all()
+    products = db.query(Product).order_by(Product.name.asc()).all()
 
     return templates.TemplateResponse("invoice.html", {
         "request": request,
