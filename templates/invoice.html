@@ -103,6 +103,17 @@ function updateTotalFromInput() {
   const qty = parseFloat(document.getElementById("quantity_sold").value) || 0;
   document.getElementById("total_price").value = (price * qty).toFixed(2);
 }
+
+function updateTotal() {
+  // Recalcule le total quand la quantité change
+  updateTotalFromInput();
+}
+
+// ✅ Exécuter une première fois au chargement pour initialiser le total
+document.addEventListener("DOMContentLoaded", () => {
+  updateTotalFromInput();
+});
 </script>
+
 
 {% endblock %}
