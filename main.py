@@ -377,38 +377,52 @@ def generate_invoice_pdf(invoice, sales, total):
     c = canvas.Canvas(buffer, pagesize=A4)
     width, height = A4
 
-    # Titre
-    c.setFont("Helvetica-Bold", 16)
-    c.drawString(50, height - 50, f"Facture #{invoice.id}")
+    # --- Entête ---
+    c.setFont("Helvetica-Bold", 18)
+    c.drawCentredString(width / 2, height - 50, "FACTURE QUINCAILLERIE NIVAL ESPOIR")
 
-    # Client
+    c.setFont("Helvetica", 10)
+    c.drawCentredString(width / 2, height - 65, "HEVIE DJEKANTO - Bénin | Tel: +229 01 62 01 96 05")
+
+    # --- Infos client ---
     c.setFont("Helvetica", 12)
-    c.drawString(50, height - 80, f"Client : {invoice.client_name}")
-    c.drawString(50, height - 100, f"Date : {invoice.date.strftime('%d/%m/%Y')}")
+    c.drawString(50, height - 100, f"Client : {invoice.client_name}")
+    c.drawString(50, height - 120, f"Date : {invoice.date.strftime('%d/%m/%Y %H:%M')}")
 
-    # Tableau des ventes
-    y = height - 150
+    # --- Tableau des ventes ---
+    y = height - 160
     c.setFont("Helvetica-Bold", 12)
     c.drawString(50, y, "Produit")
     c.drawString(250, y, "Quantité")
     c.drawString(350, y, "Prix total")
 
+    # Ligne horizontale sous l’entête du tableau
+    c.line(45, y - 5, width - 45, y - 5)
+
     c.setFont("Helvetica", 12)
     for sale in sales:
-        y -= 20
+        y -= 25
         c.drawString(50, y, sale.product.name)
         c.drawString(250, y, str(sale.quantity_sold))
         c.drawString(350, y, f"{sale.total_price:.2f} FCFA")
+        # Bordure sous chaque ligne
+        c.line(45, y - 5, width - 45, y - 5)
 
-    # Total
+    # --- Total ---
     y -= 40
     c.setFont("Helvetica-Bold", 12)
-    c.drawString(50, y, f"Total : {total:.2f} FCFA")
+    c.drawRightString(width - 50, y, f"Total : {total:.2f} FCFA")
+
+    # --- Signature ---
+    y -= 60
+    c.setFont("Helvetica", 10)
+    c.drawString(50, y, "Signature vendeur : _____________________")
 
     c.showPage()
     c.save()
     buffer.seek(0)
     return buffer
+
 
 
 # ------------------ REAPPROVISIONNEMENT ------------------
