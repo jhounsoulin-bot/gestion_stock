@@ -266,7 +266,7 @@ def admin_dashboard(request: Request, db: Session = Depends(get_db)):
         })
 
     # --- Stats produits ---
-    products = db.query(Product).all()
+    products = db.query(Product).order_by(Product.name.asc()).all()
     product_stats = []
     for p in products:
         sold_qty = sum(s.quantity_sold for s in p.sales)
