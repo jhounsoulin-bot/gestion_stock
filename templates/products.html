@@ -36,10 +36,17 @@
                 Supprimer
             </button>
         </form>
-  
+           
 
-        </td>
-    </tr>
+        {% if error %}
+<div class="alert alert-danger">
+  {{ error }}
+</div>
+{% endif %}
+
+
+    </td>
+  </tr>
     {% endfor %}
   </tbody>
 </table>
