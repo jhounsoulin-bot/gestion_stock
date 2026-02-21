@@ -29,24 +29,8 @@
       <td>
         <!-- ✅ Seul le bouton Réapprovisionner reste -->
         <a href="/reapprovisionnement/{{ product.id }}" class="btn btn-warning">Réapprovisionner</a>
-     
-
-        <form action="/delete-product/{{ product.id }}" method="post" style="display:inline;">
-            <button type="submit" onclick="return confirm('Voulez-vous vraiment supprimer ce produit ?');">
-                Supprimer
-            </button>
-        </form>
-           
-
-        {% if error %}
-<div class="alert alert-danger">
-  {{ error }}
-</div>
-{% endif %}
-
-
-    </td>
-  </tr>
+      </td>
+    </tr>
     {% endfor %}
   </tbody>
 </table>

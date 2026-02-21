@@ -461,21 +461,5 @@ def reapprovisionnement(
 
     return RedirectResponse(url="/products-page", status_code=303)
 
-@app.post("/delete-product/{product_id}")
-def delete_product(product_id: int, request: Request, db: Session = Depends(get_db)):
-    if "user" not in request.session:
-        return RedirectResponse(url="/login", status_code=303)
-
-    product = db.query(Product).filter(Product.id == product_id).first()
-    if not product:
-        raise HTTPException(status_code=404, detail="Produit introuvable")
-
-    # Vérifier si des ventes existent pour ce produit
-    if product.sales and len(product.sales) > 0:
-        raise HTTPException(status_code=400, detail="Impossible de supprimer ce produit car des ventes y sont liées")
-
-    db.delete(product)
-    db.commit()
-    return RedirectResponse(url="/products-page", status_code=303)
 
 
