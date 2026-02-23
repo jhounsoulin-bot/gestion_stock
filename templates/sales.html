@@ -40,6 +40,13 @@
         <a href="/invoice/{{ sale.invoice_id }}" class="btn btn-primary">
           📄 Voir facture
         </a>
+
+       <form action="/archive-sale/{{ sale.id }}" method="post" style="display:inline;">
+    <button type="submit" onclick="return confirm('Voulez-vous vraiment archiver cette vente ?');">
+        Archiver
+    </button>
+</form>
+
       </td>
       <!--
 <td>

@@ -9,14 +9,23 @@ from passlib.context import CryptContext
 from starlette.middleware.sessions import SessionMiddleware
 from reportlab.lib.pagesizes import A4
 from reportlab.pdfgen import canvas
+from sqlalchemy import Boolean
+
+
 
 app = FastAPI(title="Gestion Stock API", docs_url="/docs", redoc_url="/redoc")
 templates = Jinja2Templates(directory="templates")
 app.mount("/static", StaticFiles(directory="static"), name="static")
 app.add_middleware(SessionMiddleware, secret_key="ton_secret_ultra_long_et_imprevisible")
 
-DATABASE_URL = os.getenv("DATABASE_URL")
+# Remplace cette ligne :
+# DATABASE_URL = os.getenv("DATABASE_URL")
+
+# Par une valeur par défaut si la variable n'est pas définie
+DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./gestion_stock.db")
+
 engine = create_engine(DATABASE_URL, echo=False, pool_pre_ping=True)
+
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
 
@@ -94,6 +103,8 @@ class Sale(Base):
     date = Column(DateTime, default=datetime.datetime.utcnow)
     invoice_id = Column(Integer, ForeignKey("invoices.id"))
     product = relationship("Product", backref="sales")
+    archived = Column(Boolean, default=False) # ✅ nouveau champ
+
 
 @app.on_event("startup")
 def on_startup():
@@ -183,7 +194,7 @@ def submit_product(request: Request, name: str = Form(...), quantity: float = Fo
 def sales_page(request: Request, db: Session = Depends(get_db)):
     if "user" not in request.session:
         return RedirectResponse(url="/login", status_code=303)
-    sales = db.query(Sale).order_by(Sale.date.desc()).all()
+    sales = db.query(Sale).filter(Sale.archived == False).order_by(Sale.date.desc()).all()
     products = db.query(Product).order_by(Product.name.asc()).all()
     return templates.TemplateResponse("sales.html", {"request": request, "sales": sales, "products": products})
 
@@ -460,6 +471,20 @@ def reapprovisionnement(
     db.refresh(product)
 
     return RedirectResponse(url="/products-page", status_code=303)
+
+
+@app.post("/archive-sale/{sale_id}")
+def archive_sale(sale_id: int, request: Request, db: Session = Depends(get_db)):
+    if "user" not in request.session:
+        return RedirectResponse(url="/login", status_code=303)
+
+    sale = db.query(Sale).filter(Sale.id == sale_id).first()
+    if not sale:
+        raise HTTPException(status_code=404, detail="Vente introuvable")
+
+    sale.archived = True
+    db.commit()
+    return RedirectResponse(url="/sales-page", status_code=303)
 
 
 
