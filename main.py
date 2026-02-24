@@ -1,15 +1,29 @@
+# --- FastAPI et Starlette ---
 from fastapi import FastAPI, Depends, HTTPException, Request, Form
 from fastapi.templating import Jinja2Templates
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import RedirectResponse, HTMLResponse, StreamingResponse
-from sqlalchemy import create_engine, Column, Integer, String, Float, ForeignKey, DateTime, func
-from sqlalchemy.orm import sessionmaker, declarative_base, relationship, Session
-import datetime, os, io
-from passlib.context import CryptContext
 from starlette.middleware.sessions import SessionMiddleware
+
+# --- SQLAlchemy ---
+from sqlalchemy import (
+    create_engine, Column, Integer, String, Float, ForeignKey,
+    DateTime, Boolean, func
+)
+from sqlalchemy.orm import sessionmaker, declarative_base, relationship, Session
+
+# --- Sécurité et mots de passe ---
+from passlib.context import CryptContext
+
+# --- PDF et génération de documents ---
 from reportlab.lib.pagesizes import A4
 from reportlab.pdfgen import canvas
-from sqlalchemy import Boolean
+
+# --- Utilitaires Python ---
+import datetime
+import os
+import io
+
 
 
 
