@@ -406,12 +406,8 @@ def delete_product(product_id: int, request: Request, db: Session = Depends(get_
     product = db.query(Product).filter(Product.id == product_id).first()
     if not product:
         raise HTTPException(status_code=404, detail="Produit introuvable")
-    # Désactiver les contraintes FK temporairement (PostgreSQL)
-    db.execute(text("SET session_replication_role = replica"))
     db.execute(text("UPDATE sales SET product_id = NULL WHERE product_id = :pid"), {"pid": product_id})
     db.delete(product)
-    db.commit()
-    db.execute(text("SET session_replication_role = DEFAULT"))
     db.commit()
     return RedirectResponse(url="/products-page", status_code=303)
 
