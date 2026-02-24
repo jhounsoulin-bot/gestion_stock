@@ -37,11 +37,6 @@
         <a href="/invoice/{{ sale.invoice_id }}" class="btn btn-primary">
           📄 Voir facture
         </a>
-        <form action="/delete-sale/{{ sale.id }}" method="post" style="display:inline;">
-          <button type="submit" onclick="return confirm('Voulez-vous vraiment supprimer cette vente ?');">
-            🗑️ Supprimer
-          </button>
-        </form>
       </td>
     </tr>
     {% endfor %}
