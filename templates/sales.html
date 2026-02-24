@@ -41,20 +41,10 @@
           📄 Voir facture
         </a>
 
-       <form action="/archive-sale/{{ sale.id }}" method="post" style="display:inline;">
-    <button type="submit" onclick="return confirm('Voulez-vous vraiment archiver cette vente ?');">
-        Archiver
-    </button>
+     
 </form>
 
       </td>
-      <!--
-<td>
-  <button onclick="window.open('/invoice/{{ sale.invoice_id }}','_blank'); window.print();" class="btn btn-secondary">
-    🖨️ Imprimer
-  </button>
-</td>
--->
 
     </tr>
     {% endfor %}

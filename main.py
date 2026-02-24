@@ -8,7 +8,7 @@ from starlette.middleware.sessions import SessionMiddleware
 # --- SQLAlchemy ---
 from sqlalchemy import (
     create_engine, Column, Integer, String, Float, ForeignKey,
-    DateTime, Boolean, func
+    DateTime, func
 )
 from sqlalchemy.orm import sessionmaker, declarative_base, relationship, Session
 
@@ -30,15 +30,10 @@ templates = Jinja2Templates(directory="templates")
 app.mount("/static", StaticFiles(directory="static"), name="static")
 app.add_middleware(SessionMiddleware, secret_key="ton_secret_ultra_long_et_imprevisible")
 
-# Utiliser PostgreSQL en ligne (Render) si DATABASE_URL est défini,
-# sinon basculer sur SQLite en local
 DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./gestion_stock.db")
-
 engine = create_engine(DATABASE_URL, echo=False, pool_pre_ping=True)
-
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
-
 
 # Configuration Passlib avec Argon2
 pwd_context = CryptContext(
@@ -57,7 +52,6 @@ def verify_and_upgrade_password(password: str, user, db: Session) -> bool:
             return True
     except Exception:
         return False
-
 
 def hash_password(password: str) -> str:
     return pwd_context.hash(password)
@@ -111,7 +105,6 @@ class Sale(Base):
     date = Column(DateTime, default=datetime.datetime.utcnow)
     invoice_id = Column(Integer, ForeignKey("invoices.id"))
     product = relationship("Product", backref="sales")
-    archived = Column(Boolean, default=False, server_default='false')
 
 
 @app.on_event("startup")
@@ -143,7 +136,6 @@ def login(request: Request, username: str = Form(...), password: str = Form(...)
     request.session["user"] = user.username
     return RedirectResponse(url="/sales-page", status_code=303)
 
-
 @app.get("/logout")
 def logout(request: Request):
     request.session.clear()
@@ -166,17 +158,11 @@ def init_admin(db: Session = Depends(get_db)):
 def products_page(request: Request, q: str = "", db: Session = Depends(get_db)):
     if "user" not in request.session:
         return RedirectResponse(url="/login", status_code=303)
-
     if q:
         products = db.query(Product).filter(Product.name.ilike(f"%{q}%")).all()
     else:
         products = db.query(Product).order_by(Product.name.asc()).all()
-
-    return templates.TemplateResponse("products.html", {
-        "request": request,
-        "products": products,
-        "q": q
-    })
+    return templates.TemplateResponse("products.html", {"request": request, "products": products, "q": q})
 
 @app.get("/add-product")
 def add_product_page(request: Request):
@@ -200,7 +186,7 @@ def submit_product(request: Request, name: str = Form(...), quantity: float = Fo
 def sales_page(request: Request, db: Session = Depends(get_db)):
     if "user" not in request.session:
         return RedirectResponse(url="/login", status_code=303)
-    sales = db.query(Sale).filter(Sale.archived.is_(False)).order_by(Sale.date.desc()).all()
+    sales = db.query(Sale).order_by(Sale.date.desc()).all()
     products = db.query(Product).order_by(Product.name.asc()).all()
     return templates.TemplateResponse("sales.html", {"request": request, "sales": sales, "products": products})
 
@@ -251,56 +237,38 @@ def admin_dashboard(request: Request, db: Session = Depends(get_db)):
 
     today = datetime.date.today()
 
-    # --- Ventes journalières ---
     daily_sales = db.query(func.sum(Sale.total_price))\
         .filter(func.date(Sale.date) == today).scalar() or 0
 
-    # --- Ventes hebdomadaires ---
     start_week = today - datetime.timedelta(days=today.weekday())
     weekly_sales = db.query(func.sum(Sale.total_price))\
         .filter(Sale.date >= start_week).scalar() or 0
 
-    # --- Ventes mensuelles ---
     start_month = today.replace(day=1)
     monthly_sales = db.query(func.sum(Sale.total_price))\
         .filter(Sale.date >= start_month).scalar() or 0
 
-    # --- Ventes par mois (janvier → décembre) ---
     monthly_totals = []
     for month in range(1, 13):
         start = datetime.date(today.year, month, 1)
-        if month == 12:
-            end = datetime.date(today.year + 1, 1, 1)
-        else:
-            end = datetime.date(today.year, month + 1, 1)
-
+        end = datetime.date(today.year + 1, 1, 1) if month == 12 else datetime.date(today.year, month + 1, 1)
         total = db.query(func.sum(Sale.total_price))\
             .filter(Sale.date >= start, Sale.date < end).scalar() or 0
+        monthly_totals.append({"month": start.strftime("%B"), "total": total})
 
-        monthly_totals.append({
-            "month": start.strftime("%B"),
-            "total": total
-        })
-
-    # --- Stats produits ---
     products = db.query(Product).order_by(Product.name.asc()).all()
     product_stats = []
     for p in products:
         sold_qty = sum(s.quantity_sold for s in p.sales)
-        remaining = p.quantity
-        initial = p.total_quantity
         product_stats.append({
             "name": p.name,
-            "initial": initial,
+            "initial": p.total_quantity,
             "sold": sold_qty,
-            "remaining": remaining
+            "remaining": p.quantity
         })
 
-    # --- Top 3 / Bottom 3 ---
     top_3 = sorted(product_stats, key=lambda x: x["sold"], reverse=True)[:3]
     bottom_3 = sorted(product_stats, key=lambda x: x["sold"])[:3]
-
-    # --- Alertes stock faible ---
     alerts = [p for p in product_stats if p["remaining"] < 5]
 
     return templates.TemplateResponse("admin_dashboard.html", {
@@ -325,23 +293,18 @@ def reset_db(request: Request, db: Session = Depends(get_db)):
     db.commit()
     return {"message": "Toutes les ventes, factures et produits ont été réinitialisés."}
 
-
 # ------------------ INVOICES ------------------
 
 @app.get("/invoice/{invoice_id}")
 def view_invoice(invoice_id: int, request: Request, db: Session = Depends(get_db)):
     if "user" not in request.session:
         return RedirectResponse(url="/login", status_code=303)
-
     invoice = db.query(Invoice).filter(Invoice.id == invoice_id).first()
     if not invoice:
         raise HTTPException(status_code=404, detail="Facture introuvable")
-
     sales = db.query(Sale).filter(Sale.invoice_id == invoice_id).all()
     total = sum(s.total_price for s in sales)
-
     products = db.query(Product).order_by(Product.name.asc()).all()
-
     return templates.TemplateResponse("invoice.html", {
         "request": request,
         "invoice": invoice,
@@ -349,7 +312,6 @@ def view_invoice(invoice_id: int, request: Request, db: Session = Depends(get_db
         "total": total,
         "products": products
     })
-
 
 @app.get("/invoice-page")
 def invoice_page(request: Request, db: Session = Depends(get_db)):
@@ -369,48 +331,40 @@ def create_invoice(request: Request, client_name: str = Form(...), db: Session =
     return RedirectResponse(url=f"/invoice/{invoice.id}", status_code=303)
 
 # ------------------ PDF GENERATION ------------------
+
 @app.get("/invoice/{invoice_id}/pdf")
 def download_invoice_pdf(invoice_id: int, db: Session = Depends(get_db)):
     invoice = db.query(Invoice).filter(Invoice.id == invoice_id).first()
     if not invoice:
         raise HTTPException(status_code=404, detail="Facture introuvable")
-
     sales = db.query(Sale).filter(Sale.invoice_id == invoice_id).all()
     total = sum(s.total_price for s in sales)
-
     buffer = generate_invoice_pdf(invoice, sales, total)
-
     return StreamingResponse(
         buffer,
         media_type="application/pdf",
         headers={"Content-Disposition": f"attachment; filename=facture_{invoice.id}.pdf"}
     )
 
-
 def generate_invoice_pdf(invoice, sales, total):
     buffer = io.BytesIO()
     c = canvas.Canvas(buffer, pagesize=A4)
     width, height = A4
 
-    # --- Entête ---
     c.setFont("Helvetica-Bold", 18)
     c.drawCentredString(width / 2, height - 50, "FACTURE QUINCAILLERIE NIVAL ESPOIR")
-
     c.setFont("Helvetica", 10)
     c.drawCentredString(width / 2, height - 65, "HEVIE DJEKANTO - Bénin | Tel: +229 01 62 01 96 05")
 
-    # --- Infos client ---
     c.setFont("Helvetica", 12)
     c.drawString(50, height - 100, f"Client : {invoice.client_name}")
     c.drawString(50, height - 120, f"Date : {invoice.date.strftime('%d/%m/%Y %H:%M')}")
 
-    # --- Tableau des ventes ---
     y = height - 160
     c.setFont("Helvetica-Bold", 12)
     c.drawString(50, y, "Produit")
     c.drawString(250, y, "Quantité")
     c.drawString(350, y, "Prix total")
-
     c.line(45, y - 5, width - 45, y - 5)
 
     c.setFont("Helvetica", 12)
@@ -421,12 +375,10 @@ def generate_invoice_pdf(invoice, sales, total):
         c.drawString(350, y, f"{sale.total_price:.2f} FCFA")
         c.line(45, y - 5, width - 45, y - 5)
 
-    # --- Total ---
     y -= 40
     c.setFont("Helvetica-Bold", 12)
     c.drawRightString(width - 50, y, f"Total : {total:.2f} FCFA")
 
-    # --- Signature ---
     y -= 60
     c.setFont("Helvetica", 10)
     c.drawString(50, y, "Signature vendeur : _____________________")
@@ -435,7 +387,6 @@ def generate_invoice_pdf(invoice, sales, total):
     c.save()
     buffer.seek(0)
     return buffer
-
 
 # ------------------ REAPPROVISIONNEMENT ------------------
 
@@ -458,38 +409,12 @@ def reapprovisionnement(
 ):
     if "user" not in request.session:
         return RedirectResponse(url="/login", status_code=303)
-
     product = db.query(Product).filter(Product.id == product_id).first()
     if not product:
         raise HTTPException(status_code=404, detail="Produit introuvable")
-
     product.quantity += added_quantity
     product.total_quantity += added_quantity
     product.price = new_price
-
     db.commit()
     db.refresh(product)
-
     return RedirectResponse(url="/products-page", status_code=303)
-
-
-@app.post("/archive-sale/{sale_id}")
-def archive_sale(sale_id: int, request: Request, db: Session = Depends(get_db)):
-    if "user" not in request.session:
-        return RedirectResponse(url="/login", status_code=303)
-
-    sale = db.query(Sale).filter(Sale.id == sale_id).first()
-    if not sale:
-        raise HTTPException(status_code=404, detail="Vente introuvable")
-
-    sale.archived = True
-    db.commit()
-    return RedirectResponse(url="/sales-page", status_code=303)
-
-@app.get("/migrate-db")
-def migrate_db(db: Session = Depends(get_db)):
-    from sqlalchemy import text
-    db.execute(text("ALTER TABLE sales ADD COLUMN IF NOT EXISTS archived BOOLEAN DEFAULT false"))
-    db.execute(text("UPDATE sales SET archived = false WHERE archived IS NULL"))
-    db.commit()
-    return {"message": "Migration OK !"}
