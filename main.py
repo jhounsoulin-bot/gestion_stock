@@ -485,3 +485,11 @@ def archive_sale(sale_id: int, request: Request, db: Session = Depends(get_db)):
     sale.archived = True
     db.commit()
     return RedirectResponse(url="/sales-page", status_code=303)
+
+@app.get("/migrate-db")
+def migrate_db(db: Session = Depends(get_db)):
+    from sqlalchemy import text
+    db.execute(text("ALTER TABLE sales ADD COLUMN IF NOT EXISTS archived BOOLEAN DEFAULT false"))
+    db.execute(text("UPDATE sales SET archived = false WHERE archived IS NULL"))
+    db.commit()
+    return {"message": "Migration OK !"}
