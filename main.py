@@ -120,6 +120,14 @@ def get_db():
 
 # ------------------ ROUTES ------------------
 
+@app.get("/migrate-nullable-product")
+def migrate_nullable_product(db: Session = Depends(get_db)):
+    from sqlalchemy import text
+    db.execute(text("ALTER TABLE sales ALTER COLUMN product_id DROP NOT NULL"))
+    db.commit()
+    return {"message": "Migration OK : product_id est maintenant nullable"}
+
+
 @app.get("/", response_class=HTMLResponse)
 def root():
     return RedirectResponse(url="/login", status_code=303)
@@ -392,13 +400,18 @@ def generate_invoice_pdf(invoice, sales, total):
 
 @app.post("/delete-product/{product_id}")
 def delete_product(product_id: int, request: Request, db: Session = Depends(get_db)):
+    from sqlalchemy import text
     if "user" not in request.session:
         return RedirectResponse(url="/login", status_code=303)
     product = db.query(Product).filter(Product.id == product_id).first()
     if not product:
         raise HTTPException(status_code=404, detail="Produit introuvable")
-    db.query(Sale).filter(Sale.product_id == product_id).update({"product_id": None})
+    # Désactiver les contraintes FK temporairement (PostgreSQL)
+    db.execute(text("SET session_replication_role = replica"))
+    db.execute(text("UPDATE sales SET product_id = NULL WHERE product_id = :pid"), {"pid": product_id})
     db.delete(product)
+    db.commit()
+    db.execute(text("SET session_replication_role = DEFAULT"))
     db.commit()
     return RedirectResponse(url="/products-page", status_code=303)
 
