@@ -9,8 +9,6 @@
   <button type="submit">Créer la facture</button>
 </form>
 
-<input type="number" step="0.25" min="0.25" value="0.25" name="quantity_sold" required>
-
 <hr>
 
 <h2>Historique des ventes</h2>
@@ -24,7 +22,6 @@
       <th>Total (FCFA)</th>
       <th>Date</th>
       <th>Facture</th>
-      <th>Action</th>
     </tr>
   </thead>
   <tbody>
@@ -40,12 +37,12 @@
         <a href="/invoice/{{ sale.invoice_id }}" class="btn btn-primary">
           📄 Voir facture
         </a>
-
-     
-</form>
-
+        <form action="/delete-sale/{{ sale.id }}" method="post" style="display:inline;">
+          <button type="submit" onclick="return confirm('Voulez-vous vraiment supprimer cette vente ?');">
+            🗑️ Supprimer
+          </button>
+        </form>
       </td>
-
     </tr>
     {% endfor %}
   </tbody>

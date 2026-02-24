@@ -388,6 +388,19 @@ def generate_invoice_pdf(invoice, sales, total):
     buffer.seek(0)
     return buffer
 
+# ------------------ DELETE SALE ------------------
+
+@app.post("/delete-sale/{sale_id}")
+def delete_sale(sale_id: int, request: Request, db: Session = Depends(get_db)):
+    if "user" not in request.session:
+        return RedirectResponse(url="/login", status_code=303)
+    sale = db.query(Sale).filter(Sale.id == sale_id).first()
+    if not sale:
+        raise HTTPException(status_code=404, detail="Vente introuvable")
+    db.delete(sale)
+    db.commit()
+    return RedirectResponse(url="/sales-page", status_code=303)
+
 # ------------------ REAPPROVISIONNEMENT ------------------
 
 @app.get("/reapprovisionnement/{product_id}")
