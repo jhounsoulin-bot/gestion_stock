@@ -118,8 +118,7 @@ class Sale(Base):
     date = Column(DateTime, default=datetime.datetime.utcnow)
     invoice_id = Column(Integer, ForeignKey("invoices.id"))
     product = relationship("Product", backref="sales")
-    archived = Column(Boolean, default=False) # ✅ nouveau champ
-
+    archived = Column(Boolean, default=False, server_default='false')
 
 @app.on_event("startup")
 def on_startup():
@@ -209,7 +208,7 @@ def submit_product(request: Request, name: str = Form(...), quantity: float = Fo
 def sales_page(request: Request, db: Session = Depends(get_db)):
     if "user" not in request.session:
         return RedirectResponse(url="/login", status_code=303)
-    sales = db.query(Sale).filter(Sale.archived == False).order_by(Sale.date.desc()).all()
+    sales = db.query(Sale).filter(Sale.archived.is_(False)).order_by(Sale.date.desc()).all()
     products = db.query(Product).order_by(Product.name.asc()).all()
     return templates.TemplateResponse("sales.html", {"request": request, "sales": sales, "products": products})
 
