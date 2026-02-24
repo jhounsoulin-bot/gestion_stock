@@ -25,23 +25,24 @@ import os
 import io
 
 
-
-
 app = FastAPI(title="Gestion Stock API", docs_url="/docs", redoc_url="/redoc")
 templates = Jinja2Templates(directory="templates")
 app.mount("/static", StaticFiles(directory="static"), name="static")
 app.add_middleware(SessionMiddleware, secret_key="ton_secret_ultra_long_et_imprevisible")
 
-# Remplace cette ligne :
-# DATABASE_URL = os.getenv("DATABASE_URL")
+import os
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker, declarative_base
 
-# Par une valeur par défaut si la variable n'est pas définie
+# Utiliser PostgreSQL en ligne (Render) si DATABASE_URL est défini,
+# sinon basculer sur SQLite en local
 DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./gestion_stock.db")
 
 engine = create_engine(DATABASE_URL, echo=False, pool_pre_ping=True)
 
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
+
 
 # Configuration Passlib avec Argon2
 
