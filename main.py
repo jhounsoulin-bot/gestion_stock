@@ -30,10 +30,6 @@ templates = Jinja2Templates(directory="templates")
 app.mount("/static", StaticFiles(directory="static"), name="static")
 app.add_middleware(SessionMiddleware, secret_key="ton_secret_ultra_long_et_imprevisible")
 
-import os
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker, declarative_base
-
 # Utiliser PostgreSQL en ligne (Render) si DATABASE_URL est défini,
 # sinon basculer sur SQLite en local
 DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./gestion_stock.db")
@@ -45,18 +41,15 @@ Base = declarative_base()
 
 
 # Configuration Passlib avec Argon2
-
 pwd_context = CryptContext(
-    schemes=["argon2", "pbkdf2_sha256", "bcrypt"],  # accepte aussi bcrypt
-    default="argon2",                               # nouvel algo par défaut
+    schemes=["argon2", "pbkdf2_sha256", "bcrypt"],
+    default="argon2",
     deprecated="auto"
 )
 
 def verify_and_upgrade_password(password: str, user, db: Session) -> bool:
     try:
-        # Vérifie le mot de passe avec le hash existant
         if pwd_context.verify(password, user.password_hash):
-            # Si le hash n'est pas au format par défaut (argon2), on le met à jour
             if pwd_context.needs_update(user.password_hash):
                 user.password_hash = pwd_context.hash(password)
                 db.add(user)
@@ -120,6 +113,7 @@ class Sale(Base):
     product = relationship("Product", backref="sales")
     archived = Column(Boolean, default=False, server_default='false')
 
+
 @app.on_event("startup")
 def on_startup():
     Base.metadata.create_all(bind=engine)
@@ -173,12 +167,10 @@ def products_page(request: Request, q: str = "", db: Session = Depends(get_db)):
     if "user" not in request.session:
         return RedirectResponse(url="/login", status_code=303)
 
-    # Si un terme de recherche est fourni, filtrer les produits
     if q:
         products = db.query(Product).filter(Product.name.ilike(f"%{q}%")).all()
     else:
         products = db.query(Product).order_by(Product.name.asc()).all()
-
 
     return templates.TemplateResponse("products.html", {
         "request": request,
@@ -208,7 +200,7 @@ def submit_product(request: Request, name: str = Form(...), quantity: float = Fo
 def sales_page(request: Request, db: Session = Depends(get_db)):
     if "user" not in request.session:
         return RedirectResponse(url="/login", status_code=303)
-   sales = db.query(Sale).filter(Sale.archived.is_(False)).order_by(Sale.date.desc()).all() 
+    sales = db.query(Sale).filter(Sale.archived.is_(False)).order_by(Sale.date.desc()).all()
     products = db.query(Product).order_by(Product.name.asc()).all()
     return templates.TemplateResponse("sales.html", {"request": request, "sales": sales, "products": products})
 
@@ -264,7 +256,7 @@ def admin_dashboard(request: Request, db: Session = Depends(get_db)):
         .filter(func.date(Sale.date) == today).scalar() or 0
 
     # --- Ventes hebdomadaires ---
-    start_week = today - datetime.timedelta(days=today.weekday())  # lundi
+    start_week = today - datetime.timedelta(days=today.weekday())
     weekly_sales = db.query(func.sum(Sale.total_price))\
         .filter(Sale.date >= start_week).scalar() or 0
 
@@ -286,7 +278,7 @@ def admin_dashboard(request: Request, db: Session = Depends(get_db)):
             .filter(Sale.date >= start, Sale.date < end).scalar() or 0
 
         monthly_totals.append({
-            "month": start.strftime("%B"),  # Nom du mois (Janvier, Février…)
+            "month": start.strftime("%B"),
             "total": total
         })
 
@@ -386,10 +378,8 @@ def download_invoice_pdf(invoice_id: int, db: Session = Depends(get_db)):
     sales = db.query(Sale).filter(Sale.invoice_id == invoice_id).all()
     total = sum(s.total_price for s in sales)
 
-    # Générer le PDF
     buffer = generate_invoice_pdf(invoice, sales, total)
 
-    # Retourner le PDF en StreamingResponse
     return StreamingResponse(
         buffer,
         media_type="application/pdf",
@@ -421,7 +411,6 @@ def generate_invoice_pdf(invoice, sales, total):
     c.drawString(250, y, "Quantité")
     c.drawString(350, y, "Prix total")
 
-    # Ligne horizontale sous l’entête du tableau
     c.line(45, y - 5, width - 45, y - 5)
 
     c.setFont("Helvetica", 12)
@@ -430,7 +419,6 @@ def generate_invoice_pdf(invoice, sales, total):
         c.drawString(50, y, sale.product.name)
         c.drawString(250, y, str(sale.quantity_sold))
         c.drawString(350, y, f"{sale.total_price:.2f} FCFA")
-        # Bordure sous chaque ligne
         c.line(45, y - 5, width - 45, y - 5)
 
     # --- Total ---
@@ -447,7 +435,6 @@ def generate_invoice_pdf(invoice, sales, total):
     c.save()
     buffer.seek(0)
     return buffer
-
 
 
 # ------------------ REAPPROVISIONNEMENT ------------------
@@ -476,7 +463,6 @@ def reapprovisionnement(
     if not product:
         raise HTTPException(status_code=404, detail="Produit introuvable")
 
-    # ✅ Mise à jour du stock et du prix
     product.quantity += added_quantity
     product.total_quantity += added_quantity
     product.price = new_price
@@ -499,6 +485,3 @@ def archive_sale(sale_id: int, request: Request, db: Session = Depends(get_db)):
     sale.archived = True
     db.commit()
     return RedirectResponse(url="/sales-page", status_code=303)
-
-
-
