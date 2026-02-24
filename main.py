@@ -97,7 +97,7 @@ class Invoice(Base):
 class Sale(Base):
     __tablename__ = "sales"
     id = Column(Integer, primary_key=True, index=True)
-    product_id = Column(Integer, ForeignKey("products.id"), nullable=False)
+    product_id = Column(Integer, ForeignKey("products.id"), nullable=True)
     username = Column(String(255), nullable=False)
     client_name = Column(String(255), nullable=False)
     quantity_sold = Column(Float, nullable=False)
@@ -397,6 +397,7 @@ def delete_product(product_id: int, request: Request, db: Session = Depends(get_
     product = db.query(Product).filter(Product.id == product_id).first()
     if not product:
         raise HTTPException(status_code=404, detail="Produit introuvable")
+    db.query(Sale).filter(Sale.product_id == product_id).update({"product_id": None})
     db.delete(product)
     db.commit()
     return RedirectResponse(url="/products-page", status_code=303)
