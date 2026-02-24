@@ -208,7 +208,7 @@ def submit_product(request: Request, name: str = Form(...), quantity: float = Fo
 def sales_page(request: Request, db: Session = Depends(get_db)):
     if "user" not in request.session:
         return RedirectResponse(url="/login", status_code=303)
-    sales = db.query(Sale).filter(Sale.archived.is_(False)).order_by(Sale.date.desc()).all()
+   sales = db.query(Sale).filter(Sale.archived.is_(False)).order_by(Sale.date.desc()).all() 
     products = db.query(Product).order_by(Product.name.asc()).all()
     return templates.TemplateResponse("sales.html", {"request": request, "sales": sales, "products": products})
 
