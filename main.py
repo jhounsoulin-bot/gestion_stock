@@ -86,7 +86,7 @@ class Product(Base):
     price = Column(Float, nullable=False)
     username = Column(String(255), nullable=False)
     ville = Column(String(255), nullable=False)
-
+    is_active = Column(Integer, default=1)  # ← ligne manquante
     
 class Invoice(Base):
     __tablename__ = "invoices"
@@ -168,11 +168,10 @@ def products_page(request: Request, q: str = "", db: Session = Depends(get_db)):
     if "user" not in request.session:
         return RedirectResponse(url="/login", status_code=303)
     if q:
-# AVANT
-     products = db.query(Product).filter(Product.name.ilike(f"%{q}%")).all()
+        products = db.query(Product).filter(Product.name.ilike(f"%{q}%"), Product.is_active == 1).all()
     else:
-     products = db.query(Product).order_by(Product.name.asc()).all()
-
+        products = db.query(Product).filter(Product.is_active == 1).order_by(Product.name.asc()).all()
+    return templates.TemplateResponse("products.html", {"request": request, "products": products, "q": q})
 
 @app.get("/add-product")
 def add_product_page(request: Request):
