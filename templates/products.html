@@ -29,13 +29,6 @@
       <td>
         <a href="/reapprovisionnement/{{ product.id }}" class="btn btn-warning">Réapprovisionner</a>
 
-        <form action="/hide-product/{{ product.id }}" method="post" style="display:inline;">
-          <button type="submit" class="btn btn-secondary"
-            onclick="return confirm('Masquer ce produit ?')">
-            🙈 Masquer
-          </button>
-        </form>
-
       </td>
     </tr>
     {% endfor %}
