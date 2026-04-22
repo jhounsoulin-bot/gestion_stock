@@ -86,7 +86,9 @@ class Product(Base):
     price = Column(Float, nullable=False)
     username = Column(String(255), nullable=False)
     ville = Column(String(255), nullable=False)
+    is_active = Column(Integer, default=1)  # 1 = visible, 0 = masqué
 
+    
 class Invoice(Base):
     __tablename__ = "invoices"
     id = Column(Integer, primary_key=True, index=True)
@@ -126,6 +128,22 @@ def migrate_nullable_product(db: Session = Depends(get_db)):
     db.execute(text("ALTER TABLE sales ALTER COLUMN product_id DROP NOT NULL"))
     db.commit()
     return {"message": "Migration OK : product_id est maintenant nullable"}
+
+# À placer juste après :
+# @app.get("/migrate-nullable-product")
+# def migrate_nullable_product(...)
+
+@app.get("/migrate-is-active")
+def migrate_is_active(db: Session = Depends(get_db)):
+    from sqlalchemy import text
+    try:
+        db.execute(text("ALTER TABLE products ADD COLUMN is_active INTEGER DEFAULT 1"))
+        db.execute(text("UPDATE products SET is_active = 1 WHERE is_active IS NULL"))
+        db.commit()
+        return {"message": "Migration OK"}
+    except Exception as e:
+        return {"message": f"Déjà migré ou erreur : {str(e)}"}
+
 
 
 @app.get("/", response_class=HTMLResponse)
@@ -167,9 +185,11 @@ def products_page(request: Request, q: str = "", db: Session = Depends(get_db)):
     if "user" not in request.session:
         return RedirectResponse(url="/login", status_code=303)
     if q:
-        products = db.query(Product).filter(Product.name.ilike(f"%{q}%")).all()
+# APRÈS
+       products = db.query(Product).filter(Product.name.ilike(f"%{q}%"), Product.is_active == 1).all()
     else:
-        products = db.query(Product).order_by(Product.name.asc()).all()
+       products = db.query(Product).filter(Product.is_active == 1).order_by(Product.name.asc()).all()
+
     return templates.TemplateResponse("products.html", {"request": request, "products": products, "q": q})
 
 @app.get("/add-product")
@@ -195,14 +215,16 @@ def sales_page(request: Request, db: Session = Depends(get_db)):
     if "user" not in request.session:
         return RedirectResponse(url="/login", status_code=303)
     sales = db.query(Sale).order_by(Sale.date.desc()).all()
-    products = db.query(Product).order_by(Product.name.asc()).all()
+# APRÈS
+    products = db.query(Product).filter(Product.is_active == 1).order_by(Product.name.asc()).all()
     return templates.TemplateResponse("sales.html", {"request": request, "sales": sales, "products": products})
 
 @app.get("/create-sale")
 def create_sale_page(request: Request, db: Session = Depends(get_db)):
     if "user" not in request.session:
         return RedirectResponse(url="/login", status_code=303)
-    products = db.query(Product).order_by(Product.name.asc()).all()
+# APRÈS
+    products = db.query(Product).filter(Product.is_active == 1).order_by(Product.name.asc()).all()
     return templates.TemplateResponse("create_sale.html", {"request": request, "products": products})
 
 @app.post("/sales")
@@ -408,6 +430,21 @@ def delete_product(product_id: int, request: Request, db: Session = Depends(get_
         raise HTTPException(status_code=404, detail="Produit introuvable")
     db.execute(text("UPDATE sales SET product_id = NULL WHERE product_id = :pid"), {"pid": product_id})
     db.delete(product)
+    db.commit()
+    return RedirectResponse(url="/products-page", status_code=303)
+
+# À placer juste après ce bloc :
+# @app.post("/delete-product/{product_id}")
+# def delete_product(...)
+
+@app.post("/hide-product/{product_id}")
+def hide_product(product_id: int, request: Request, db: Session = Depends(get_db)):
+    if "user" not in request.session:
+        return RedirectResponse(url="/login", status_code=303)
+    product = db.query(Product).filter(Product.id == product_id).first()
+    if not product:
+        raise HTTPException(status_code=404, detail="Produit introuvable")
+    product.is_active = 0
     db.commit()
     return RedirectResponse(url="/products-page", status_code=303)
 
