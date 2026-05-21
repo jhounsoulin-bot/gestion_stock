@@ -13,6 +13,26 @@
         button:hover { background-color: #63b3ed; }
         a { text-decoration: none; color: white; background-color: #1e90ff; padding: 8px 16px; border-radius: 5px; display: inline-block; margin-bottom: 15px; }
         a:hover { background-color: #63b3ed; }
+
+        /* Style message d'erreur */
+        .error-box {
+            background-color: #fff3cd;
+            border: 1px solid #ffc107;
+            border-radius: 8px;
+            padding: 15px;
+            max-width: 400px;
+            margin-bottom: 20px;
+        }
+        .error-box p { margin: 0 0 10px 0; color: #856404; font-weight: bold; }
+        .btn-reappro {
+            background-color: #ff9800;
+            color: white;
+            padding: 8px 16px;
+            border-radius: 5px;
+            text-decoration: none;
+            display: inline-block;
+        }
+        .btn-reappro:hover { background-color: #e68900; }
     </style>
 </head>
 <body>
@@ -21,13 +41,23 @@
     <!-- Retour au dashboard -->
     <a href="/products-page">⬅ Retour aux produits</a>
 
+    <!-- Message d'erreur si produit existant -->
+    {% if error %}
+    <div class="error-box">
+        <p>⚠️ {{ error }}</p>
+        <p>Voulez-vous réapprovisionner ce produit à la place ?</p>
+        <a href="/reapprovisionnement/{{ existing_product.id }}" class="btn-reappro">
+            🔄 Réapprovisionner « {{ existing_product.name }} »
+        </a>
+    </div>
+    {% endif %}
+
     <!-- Formulaire d'ajout -->
     <form action="/add-product" method="post">
         <label for="name">Nom du produit :</label>
         <input type="text" id="name" name="name" required>
 
         <label for="quantity">Quantité :</label>
-        <!-- ✅ step="0.5" pour permettre 0.5, 1.5, etc. -->
         <input type="number" id="quantity" name="quantity" required min="0.5" step="0.5">
 
         <label for="price">Prix (FCFA) :</label>

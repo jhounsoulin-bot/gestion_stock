@@ -183,6 +183,16 @@ def add_product_page(request: Request):
 def submit_product(request: Request, name: str = Form(...), quantity: float = Form(...), price: float = Form(...), db: Session = Depends(get_db)):
     if "user" not in request.session:
         return RedirectResponse(url="/login", status_code=303)
+    
+    # Vérifier si le produit existe déjà (insensible à la casse)
+    existing = db.query(Product).filter(Product.name.ilike(name)).first()
+    if existing:
+        return templates.TemplateResponse("add_product.html", {
+            "request": request,
+            "error": f"Le produit « {existing.name} » existe déjà.",
+            "existing_product": existing
+        })
+    
     new_product = Product(name=name, quantity=quantity, total_quantity=quantity, price=price, username=request.session["user"], ville="Cotonou")
     db.add(new_product)
     db.commit()
