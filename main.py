@@ -456,3 +456,13 @@ def reapprovisionnement(
     db.commit()
     db.refresh(product)
     return RedirectResponse(url="/products-page", status_code=303)
+
+
+@app.get("/fix-quantity/{product_name}/{new_quantity}")
+def fix_quantity(product_name: str, new_quantity: float, db: Session = Depends(get_db)):
+    product = db.query(Product).filter(Product.name.ilike(product_name)).first()
+    if not product:
+        return {"message": f"Produit '{product_name}' introuvable"}
+    product.quantity = new_quantity
+    db.commit()
+    return {"message": f"Quantité de '{product.name}' mise à jour : {new_quantity}"}
