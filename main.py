@@ -458,7 +458,7 @@ def reapprovisionnement(
     return RedirectResponse(url="/products-page", status_code=303)
 
 
-@app.get("/fix-quantity/{product_name}/{new_quantity}")
+@app.get("/fix-quantity/{FER DE 8 SBS}/{21}")
 def fix_quantity(product_name: str, new_quantity: float, db: Session = Depends(get_db)):
     product = db.query(Product).filter(Product.name.ilike(product_name)).first()
     if not product:
