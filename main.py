@@ -279,7 +279,7 @@ def admin_dashboard(request: Request, db: Session = Depends(get_db)):
             .filter(Sale.date >= start, Sale.date < end).scalar() or 0
         monthly_totals.append({"month": start.strftime("%B"), "total": total})
 
-    products = db.query(Product).order_by(Product.name.asc()).all()
+    products = db.query(Product).filter(Product.is_active == 1).order_by(Product.name.asc()).all()
     product_stats = []
     for p in products:
         sold_qty = sum(s.quantity_sold for s in p.sales)
