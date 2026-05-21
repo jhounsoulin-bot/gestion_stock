@@ -317,7 +317,7 @@ def view_invoice(invoice_id: int, request: Request, db: Session = Depends(get_db
         raise HTTPException(status_code=404, detail="Facture introuvable")
     sales = db.query(Sale).filter(Sale.invoice_id == invoice_id).all()
     total = sum(s.total_price for s in sales)
-    products = db.query(Product).order_by(Product.name.asc()).all()
+    products = db.query(Product).filter(Product.is_active == 1).order_by(Product.name.asc()).all()
     return templates.TemplateResponse("invoice.html", {
         "request": request,
         "invoice": invoice,
